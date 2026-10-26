@@ -178,13 +178,16 @@ echo -e "\n${CYAN}==============================================================
 echo -e "${GREEN}${BOLD}             🎉 MYTH CONNECT.AI IS LIVE & RUNNING!                              ${NC}"
 echo -e "${CYAN}================================================================================${NC}"
 
-# Detect Host IP
+# Production Domain & Host
 SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+DOMAIN="mythconnect.mugaitechnologies.in"
 
-echo -e "  🌐 Web Application:   ${BOLD}http://${SERVER_IP}:${APP_PORT}/${NC}"
-echo -e "  ⚡ Local URL:         ${BOLD}http://localhost:${APP_PORT}/${NC}"
-echo -e "  📡 API Endpoint:      ${BOLD}http://localhost:${APP_PORT}/api/health${NC}"
-echo -e "  🔌 WebSocket Gateway: ${BOLD}ws://localhost:${APP_PORT}/ws${NC}"
+echo -e "  🌐 Production Domain: ${GREEN}${BOLD}https://${DOMAIN}/${NC}"
+echo -e "  ⚡ Local Host URL:    ${BOLD}http://localhost:${APP_PORT}/${NC}"
+echo -e "  📡 API Health Check:  ${BOLD}https://${DOMAIN}/api/health${NC}"
+echo -e "  🔌 WebSocket Gateway: ${BOLD}wss://${DOMAIN}/ws${NC}"
+echo -e "  🔗 Meta Webhook:      ${BOLD}https://${DOMAIN}/webhooks/meta${NC}"
+echo -e "  💬 WhatsApp Webhook:  ${BOLD}https://${DOMAIN}/webhooks/whatsapp${NC}"
 echo -e "  📂 Directory:         ${BOLD}$ROOT_DIR${NC}"
 echo -e "${CYAN}================================================================================${NC}\n"
 

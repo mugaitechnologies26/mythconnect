@@ -42,6 +42,14 @@ export const IntegrationsScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }
     showSnackbar('WhatsApp Cloud API connectivity test passed! Webhook active (HTTP 200).', 'success');
   };
 
+  const liveOrigin = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? window.location.origin
+    : 'https://mythconnect.mugaitechnologies.in';
+
+  const metaWebhookUrl = `${liveOrigin}/webhooks/meta`;
+  const waWebhookUrl = `${liveOrigin}/webhooks/whatsapp`;
+  const wsUrl = liveOrigin.replace(/^http/, 'ws') + '/ws';
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -90,7 +98,7 @@ export const IntegrationsScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }
               <Text style={styles.label}>Webhook Verification Callback URL</Text>
               <TextInput 
                 style={[styles.input, styles.readonlyInput]} 
-                value="http://localhost:5000/webhooks/meta" 
+                value={metaWebhookUrl} 
                 editable={false} 
               />
             </View>
@@ -142,7 +150,7 @@ export const IntegrationsScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }
               <Text style={styles.label}>Inbound WhatsApp Webhook URL</Text>
               <TextInput 
                 style={[styles.input, styles.readonlyInput]} 
-                value="http://localhost:5000/webhooks/whatsapp" 
+                value={waWebhookUrl} 
                 editable={false} 
               />
             </View>
@@ -150,7 +158,7 @@ export const IntegrationsScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }
               <Text style={styles.label}>Realtime WebSocket Gateway</Text>
               <TextInput 
                 style={[styles.input, styles.readonlyInput]} 
-                value="ws://localhost:5000/ws" 
+                value={wsUrl} 
                 editable={false} 
               />
             </View>

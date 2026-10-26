@@ -46,10 +46,12 @@ app.use('/webhooks', webhookRoutes);
 app.use('/simulation', simulationRoutes);
 app.use('/api', apiRoutes);
 
+const wsUrl = (config.appUrl || 'https://mythconnect.mugaitechnologies.in').replace(/^http/, 'ws') + '/ws';
 const apiWelcomePayload = {
   name: 'Myth Connect.ai Enterprise Node.js Backend & Realtime Engine',
   version: '2.0.0',
   brand: 'CONNECT | CONVERT | AUTOMATE | SALES',
+  domain: config.appUrl,
   endpoints: {
     health: 'GET /api/health',
     dashboardKpis: 'GET /api/dashboard/kpis',
@@ -63,9 +65,11 @@ const apiWelcomePayload = {
     digitalProfile: 'GET /api/digital-profile',
     qrCodes: 'GET /api/qr/codes',
     reports: 'GET /api/reports/kpis',
-    realtimeWebSocket: 'ws://localhost:5000/ws',
-    simulationMetaLead: 'POST /simulation/meta-lead',
-    simulationWhatsApp: 'POST /simulation/whatsapp-reply'
+    realtimeWebSocket: wsUrl,
+    metaWebhook: `${config.appUrl}/webhooks/meta`,
+    whatsappWebhook: `${config.appUrl}/webhooks/whatsapp`,
+    simulationMetaLead: `${config.appUrl}/simulation/meta-lead`,
+    simulationWhatsApp: `${config.appUrl}/simulation/whatsapp-reply`
   }
 };
 

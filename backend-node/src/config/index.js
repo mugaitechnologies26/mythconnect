@@ -3,6 +3,7 @@ require('dotenv').config();
 module.exports = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
+  appUrl: process.env.APP_URL || 'https://mythconnect.mugaitechnologies.in',
   laravelApiUrl: process.env.LARAVEL_API_URL || 'http://127.0.0.1:8000/api',
   meta: {
     appId: process.env.META_APP_ID || '109823487192834',

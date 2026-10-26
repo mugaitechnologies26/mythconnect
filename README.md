@@ -116,6 +116,31 @@ pm2 stop mythconnect-server
 
 ---
 
+## 🌐 Production Domain & SSL Setup (`mythconnect.mugaitechnologies.in`)
+
+To connect your custom domain with HTTPS and WebSocket reverse proxy support:
+
+### 1. Point DNS Records
+In your DNS provider (e.g., Cloudflare, GoDaddy, Hostinger), add an `A` record:
+- **Host / Name**: `mythconnect`
+- **Type**: `A`
+- **Value**: `<Your-VPS-Public-IP-Address>`
+
+### 2. Auto-Install Nginx & Free SSL (Let's Encrypt)
+On your Linux server, run the automated SSL setup script:
+```bash
+sudo bash script/setup-ssl.sh
+```
+This script automatically:
+- Installs Nginx and Certbot
+- Configures reverse proxying for port 5000 and WebSocket `/ws`
+- Issues a free auto-renewing Let's Encrypt SSL certificate
+- Reloads Nginx
+
+Your webapp will then be live at **`https://mythconnect.mugaitechnologies.in`**!
+
+---
+
 ## 📁 Repository Structure
 
 ```
