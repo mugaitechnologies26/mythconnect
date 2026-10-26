@@ -1,0 +1,26 @@
+{
+  "name": "mythconnect-enterprise-crm",
+  "version": "2.0.0",
+  "description": "Myth Connect.ai - Enterprise Omnichannel Meta & WhatsApp Sales Engine and CRM Platform",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm run install:all",
+    "install:all": "npm install --prefix backend-node && npm install --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "db:init": "npm run db:init --prefix backend-node",
+    "start": "node backend-node/server.js",
+    "start:backend": "npm start --prefix backend-node",
+    "dev:backend": "npm run dev --prefix backend-node",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "keywords": [
+    "crm",
+    "whatsapp",
+    "meta-lead-ads",
+    "sales-pipeline",
+    "enterprise",
+    "mythconnect"
+  ],
+  "author": "Mugai Technologies",
+  "license": "Proprietary"
+}

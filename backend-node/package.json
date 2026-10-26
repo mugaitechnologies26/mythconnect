@@ -1,0 +1,19 @@
+{
+  "name": "mythconnect-backend-node",
+  "version": "1.0.0",
+  "description": "Myth Connect.ai - Meta & WhatsApp Realtime Communication Engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "db:init": "node src/scripts/initDb.js",
+    "test": "node test_api_crud.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.24.6",
+    "ws": "^8.18.0"
+  }
+}
