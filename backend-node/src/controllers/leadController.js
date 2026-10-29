@@ -36,6 +36,13 @@ const leadController = {
         return res.status(422).json({ success: false, error: 'Name and phone are required' });
       }
 
+      // Check if duplicate submitted in rapid succession (within 15 seconds)
+      const existing = await LeadModel.findRecentDuplicate(phone, name, 15);
+      if (existing) {
+        // Return existing lead without re-broadcasting websocket events (breaks recursion loops)
+        return res.status(200).json({ success: true, data: existing, deduplicated: true });
+      }
+
       const lead = await LeadModel.create(req.body);
 
       // Broadcast realtime event

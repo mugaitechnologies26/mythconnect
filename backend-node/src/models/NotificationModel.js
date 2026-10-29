@@ -36,6 +36,20 @@ class NotificationModel {
   }
 
   static async create(data) {
+    // Avoid duplicate notifications in rapid succession (within 15 seconds)
+    if (data.title && data.message) {
+      const existing = await db.query(
+        `SELECT * FROM notifications 
+         WHERE title = ? AND message = ? 
+           AND created_at > DATE_SUB(NOW(), INTERVAL 15 SECOND) 
+         ORDER BY id DESC LIMIT 1`,
+        [data.title, data.message]
+      );
+      if (existing && existing.length > 0) {
+        return existing[0];
+      }
+    }
+
     const res = await db.query(`
       INSERT INTO notifications (
         user_id, type, title, message, action_url, is_read

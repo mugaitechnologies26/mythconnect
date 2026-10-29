@@ -64,7 +64,31 @@ class LeadModel {
     return rows[0] || null;
   }
 
+  static async findRecentDuplicate(phone, name, seconds = 15) {
+    if (!phone && !name) return null;
+    const cleanPhone = phone ? phone.replace(/[^0-9]/g, '').slice(-10) : '';
+    const rows = await db.query(
+      `SELECT l.id FROM leads l 
+       WHERE ((? != '' AND l.phone LIKE ?) OR (? != '' AND l.name = ?)) 
+         AND l.created_at > DATE_SUB(NOW(), INTERVAL ? SECOND) 
+       ORDER BY l.id DESC LIMIT 1`,
+      [cleanPhone, `%${cleanPhone}`, name || '', name || '', seconds]
+    );
+    if (rows && rows.length > 0) {
+      return this.getById(rows[0].id);
+    }
+    return null;
+  }
+
   static async create(data) {
+    // Avoid duplicate rapid insertions if same phone or name submitted within 15 seconds
+    if (data.phone || data.name) {
+      const recent = await this.findRecentDuplicate(data.phone, data.name, 15);
+      if (recent) {
+        return recent;
+      }
+    }
+
     // Generate sequential lead code: LEAD-YYYY-XXX
     const countRows = await db.query('SELECT COUNT(*) AS total FROM leads');
     const seq = (countRows[0]?.total || 0) + 101;
