@@ -17,7 +17,10 @@ const app = express();
 const server = http.createServer(app);
 
 // Enable Cross-Origin Resource Sharing
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+const allowedOrigins = config.corsOrigin === '*'
+  ? true
+  : config.corsOrigin.split(',').map(s => s.trim());
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 // Capture raw body buffer for HMAC-SHA256 signature verification on Webhook requests
 app.use(express.json({

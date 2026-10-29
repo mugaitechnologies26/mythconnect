@@ -116,28 +116,29 @@ pm2 stop mythconnect-server
 
 ---
 
-## 🌐 Production Domain & SSL Setup (`mythconnect.mugaitechnologies.in`)
+## 🌐 Production Dual-Domain & SSL Setup (`mythconnect` & `mythconnect-api`)
 
-To connect your custom domain with HTTPS and WebSocket reverse proxy support:
+To connect both your frontend webapp and backend API with HTTPS and WebSocket reverse proxy support:
 
 ### 1. Point DNS Records
-In your DNS provider (e.g., Cloudflare, GoDaddy, Hostinger), add an `A` record:
-- **Host / Name**: `mythconnect`
-- **Type**: `A`
-- **Value**: `<Your-VPS-Public-IP-Address>`
+In your Hostinger DNS zone or domain registrar for `mugaitechnologies.in`, ensure these `A` records point to your VPS IP:
+- **`mythconnect.mugaitechnologies.in`** `A` `<Your-VPS-Public-IP>` (Frontend SPA)
+- **`mythconnect-api.mugaitechnologies.in`** `A` `<Your-VPS-Public-IP>` (Backend REST API & WebSocket)
 
-### 2. Auto-Install Nginx & Free SSL (Let's Encrypt)
-On your Linux server, run the automated SSL setup script:
+### 2. Run Automated Deployment Engine (Non-Destructive)
+On your Linux server in `/opt/mythconnect`:
 ```bash
-sudo bash script/setup-ssl.sh
+sudo bash script/deploy-hostinger-vps.sh
 ```
 This script automatically:
-- Installs Nginx and Certbot
-- Configures reverse proxying for port 5000 and WebSocket `/ws`
-- Issues a free auto-renewing Let's Encrypt SSL certificate
-- Reloads Nginx
-
-Your webapp will then be live at **`https://mythconnect.mugaitechnologies.in`**!
+1. **Scans for free ports dynamically** (does **not** kill or collide with any existing running services).
+2. **Initializes MySQL database (`mythconnect_crm`)** and applies all tables & seeds.
+3. **Builds the production frontend bundle** (`frontend/dist`).
+4. **Starts both Backend and Frontend with PM2** (`mythconnect-backend` and `mythconnect-frontend`).
+5. **Creates a new isolated Nginx config** at `/etc/nginx/sites-available/mythconnect.conf` (without touching or modifying any existing Nginx sites).
+6. **Creates the symlink** in `/etc/nginx/sites-enabled/mythconnect.conf`.
+7. **Issues Let's Encrypt SSL certificates** via Certbot for both domains with automatic HTTP->HTTPS redirects.
+8. **Reloads Nginx** cleanly.
 
 ---
 
