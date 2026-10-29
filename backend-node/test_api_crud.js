@@ -6,8 +6,8 @@ function request(method, path, data = null) {
     const bodyStr = isPost && data ? JSON.stringify(data) : '';
 
     const options = {
-      hostname: 'localhost',
-      port: 5000,
+      hostname: process.env.TEST_HOST || 'localhost',
+      port: process.env.TEST_PORT || process.env.PORT || 5050,
       path,
       method,
       headers: {
