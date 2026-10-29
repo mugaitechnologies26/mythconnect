@@ -63,29 +63,32 @@ class RealtimeSocket {
 
     switch (packet.event) {
       case 'lead.new': {
-        const lead = packet.data.lead;
+        const lead = packet.data?.lead || packet.data;
         if (lead) {
-          store.addLead({
+          store.receiveIncomingLead({
+            id: lead.id || Date.now(),
+            lead_code: lead.lead_code || `LEAD-2026-${String(store.leads.length + 1).padStart(3, '0')}`,
             name: lead.name,
             phone: lead.phone,
             email: lead.email,
             company_name: lead.company_name,
-            source_id: 1,
-            source_name: 'Meta Lead Ads',
-            source_code: 'meta',
-            status_id: 1,
-            status_code: 'new',
-            status_name: 'New',
-            status_color: '#1565E8',
-            assigned_to: 4,
-            assigned_user_name: 'Sneha Kulkarni',
+            source_id: lead.source_id || 1,
+            source_name: lead.source_name || 'Meta Lead Ads',
+            source_code: lead.source_code || 'meta',
+            status_id: lead.status_id || 1,
+            status_code: lead.status_code || 'new',
+            status_name: lead.status_name || 'New',
+            status_color: lead.status_color || '#1565E8',
+            assigned_to: lead.assigned_to || 4,
+            assigned_user_name: lead.assigned_user_name || 'Sneha Kulkarni',
             estimated_value: lead.estimated_value || 85000,
-            priority: 'high',
+            priority: lead.priority || 'high',
             city: lead.city,
             state: lead.state,
             meta_lead_id: lead.meta_lead_id,
-            meta_campaign_name: lead.campaign_name,
-            meta_ad_name: lead.ad_name,
+            meta_campaign_name: lead.meta_campaign_name || lead.campaign_name,
+            meta_ad_name: lead.meta_ad_name || lead.ad_name,
+            created_at: lead.created_at || new Date().toISOString()
           });
 
           store.showSnackbar(`🔥 Meta Lead Ingested: ${lead.name} (${lead.phone})`, 'success');
@@ -107,11 +110,13 @@ class RealtimeSocket {
       case 'notification.new': {
         const notif = packet.data;
         if (notif) {
-          store.addNotification({
-            type: notif.type,
+          store.receiveIncomingNotification({
+            id: notif.id,
+            type: notif.type || 'meta_lead_created',
             title: notif.title,
             message: notif.message,
-            action_url: notif.action_url,
+            action_url: notif.action_url || 'leads',
+            created_at: notif.created_at
           });
         }
         break;

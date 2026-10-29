@@ -34,9 +34,10 @@ export const MetaSimulationModal: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Send to backend simulation endpoint if available
+      // 1. Send to backend simulation endpoint
+      let createdLead: any = null;
       try {
-        await simulationApi.simulateMetaLead({
+        const res = await simulationApi.simulateMetaLead({
           name,
           phone,
           email,
@@ -47,61 +48,43 @@ export const MetaSimulationModal: React.FC = () => {
           city,
           state: 'Karnataka'
         });
+        createdLead = (res.data as any)?.lead || (res as any)?.lead;
       } catch (e) {
-        console.log('Node simulation dispatched locally');
+        console.warn('Backend simulation call notice, using local store action:', e);
       }
 
-      // 2. Add to store
-      const newLead = addLead({
-        name,
-        phone,
-        email,
-        company_name: company,
-        source_id: 1,
-        source_name: 'Meta Lead Ads (Facebook & Instagram)',
-        source_code: 'meta',
-        status_id: 1,
-        status_code: 'new',
-        status_name: 'New',
-        status_color: '#1565E8',
-        assigned_to: 4,
-        assigned_user_name: 'Sneha Kulkarni',
-        estimated_value: Number(estimatedValue) || 120000,
-        priority: 'high',
-        city,
-        state: 'Karnataka',
-        meta_lead_id: `meta_ld_${Date.now()}`,
-        meta_campaign_name: campaign,
-        meta_ad_name: adName,
-      });
-
-      // 3. Automated follow-up
-      const followUpTime = new Date();
-      followUpTime.setHours(followUpTime.getHours() + 2);
-
-      addFollowup({
-        lead_id: newLead.id,
-        lead_name: name,
-        lead_phone: phone,
-        lead_company: company,
-        assigned_to: 4,
-        assigned_user_name: 'Sneha Kulkarni',
-        scheduled_at: followUpTime.toISOString(),
-        type: 'whatsapp',
-        status: 'pending',
-        notes: `Automated: Ingested from ${campaign}. Send introduction deck.`
-      });
-
-      // 4. Automated Notification
-      addNotification({
-        type: 'meta_lead_created',
-        title: '🔥 New Meta Lead Ingested',
-        message: `${name} (${phone}) submitted Lead Form from ${campaign}`,
-        action_url: 'leads'
-      });
-
-      setCompletedLeadId(newLead.id);
-      showSnackbar(`🔥 Meta Lead #${newLead.lead_code} created! Auto WhatsApp welcome queued.`, 'success');
+      if (createdLead) {
+        // Backend successfully created the lead in MySQL and broadcasted realtime events
+        useAppStore.getState().receiveIncomingLead(createdLead);
+        setCompletedLeadId(createdLead.id);
+        showSnackbar(`🔥 Meta Lead simulated successfully! Ingested into database.`, 'success');
+      } else {
+        // Fallback: local store action if backend simulation endpoint wasn't reached
+        const newLead = addLead({
+          name,
+          phone,
+          email,
+          company_name: company,
+          source_id: 1,
+          source_name: 'Meta Lead Ads (Facebook & Instagram)',
+          source_code: 'meta',
+          status_id: 1,
+          status_code: 'new',
+          status_name: 'New',
+          status_color: '#1565E8',
+          assigned_to: 4,
+          assigned_user_name: 'Sneha Kulkarni',
+          estimated_value: Number(estimatedValue) || 120000,
+          priority: 'high',
+          city,
+          state: 'Karnataka',
+          meta_lead_id: `meta_ld_${Date.now()}`,
+          meta_campaign_name: campaign,
+          meta_ad_name: adName,
+        });
+        setCompletedLeadId(newLead.id);
+        showSnackbar(`🔥 Meta Lead #${newLead.lead_code} created!`, 'success');
+      }
     } catch (err: any) {
       showSnackbar(`Error: ${err.message}`, 'error');
     } finally {

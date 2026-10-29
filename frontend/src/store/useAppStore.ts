@@ -92,6 +92,8 @@ interface AppState {
   markNotificationRead: (id: number) => void;
   markAllNotificationsRead: () => void;
   addNotification: (notification: Omit<AppNotification, 'id' | 'created_at' | 'is_read'>) => void;
+  receiveIncomingLead: (lead: Lead) => void;
+  receiveIncomingNotification: (notification: any) => void;
 
   // Digital Profile & Products Mutations
   updateDigitalProfile: (patch: Partial<DigitalProfile>) => void;
@@ -698,6 +700,60 @@ export const useAppStore = create<AppState>((set, get) => ({
       notifications: [newNotif, ...state.notifications]
     }));
     notificationsApi.create(notification).catch(e => console.warn('Failed to create notification in DB:', e));
+  },
+
+  receiveIncomingLead: (lead: Lead) => {
+    set(state => {
+      // Check if lead already exists in local state by id, lead_code, meta_lead_id, or name+phone match
+      const existingIndex = state.leads.findIndex(l => 
+        (lead.id && l.id === lead.id) ||
+        (lead.lead_code && l.lead_code === lead.lead_code) ||
+        (lead.meta_lead_id && l.meta_lead_id && l.meta_lead_id === lead.meta_lead_id) ||
+        (l.phone === lead.phone && l.name === lead.name && Math.abs(new Date(l.created_at).getTime() - new Date(lead.created_at || Date.now()).getTime()) < 15000)
+      );
+
+      if (existingIndex !== -1) {
+        // Update existing lead in place rather than duplicating
+        const updatedLeads = [...state.leads];
+        updatedLeads[existingIndex] = { ...updatedLeads[existingIndex], ...lead };
+        return { leads: updatedLeads };
+      }
+
+      return {
+        leads: [lead, ...state.leads],
+        kpis: {
+          ...state.kpis,
+          totalLeads: state.kpis.totalLeads + 1,
+          newLeads: state.kpis.newLeads + 1
+        }
+      };
+    });
+  },
+
+  receiveIncomingNotification: (notification: any) => {
+    set(state => {
+      // Prevent duplicate notification popups
+      const exists = state.notifications.some(n =>
+        (notification.id && n.id === notification.id) ||
+        (n.title === notification.title && n.message === notification.message && Math.abs(new Date(n.created_at).getTime() - Date.now()) < 5000)
+      );
+
+      if (exists) return state;
+
+      const newNotif: AppNotification = {
+        id: notification.id || Date.now(),
+        type: notification.type || 'meta_lead_created',
+        title: notification.title,
+        message: notification.message,
+        action_url: notification.action_url || 'leads',
+        is_read: false,
+        created_at: notification.created_at || new Date().toISOString()
+      };
+
+      return {
+        notifications: [newNotif, ...state.notifications]
+      };
+    });
   },
 
   deleteQrCode: (qrId: number) => {
