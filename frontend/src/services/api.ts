@@ -73,6 +73,17 @@ export const authApi = {
   switchRole: (role: string) => apiClient.post('/auth/switch-role', { role }).then(r => r.data.user),
 };
 
+export const rolesApi = {
+  getAll: () => apiClient.get('/roles').then(r => r.data.data),
+  getPermissions: () => apiClient.get('/roles/permissions').then(r => r.data.data),
+  getById: (id: number) => apiClient.get(`/roles/${id}`).then(r => r.data.data),
+  create: (data: { display_name: string; name?: string; description?: string; permissions?: string[] }) =>
+    apiClient.post('/roles', data).then(r => r.data.data),
+  update: (id: number, data: { display_name?: string; description?: string; permissions?: string[] }) =>
+    apiClient.put(`/roles/${id}`, data).then(r => r.data.data),
+  delete: (id: number) => apiClient.delete(`/roles/${id}`).then(r => r.data),
+};
+
 export const notificationsApi = {
   getAll: (params?: any) => apiClient.get('/notifications', { params }).then(r => r.data.data),
   markAsRead: (id: number) => apiClient.patch(`/notifications/${id}/read`).then(r => r.data.data),

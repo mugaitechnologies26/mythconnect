@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { 
   User, Lead, Customer, Quotation, Invoice, Payment, Followup, 
   WhatsAppConversation, WhatsAppMessage, WhatsAppTemplate, QrCodeRecord, 
-  AppNotification, DashboardKPIs, Product, DigitalProfile, ProfileAnalyticsEvent 
+  AppNotification, DashboardKPIs, Product, DigitalProfile, ProfileAnalyticsEvent,
+  RoleRecord, PermissionCategoryGroup 
 } from '../types';
 import { 
   leadsApi, customersApi, quotationsApi, invoicesApi, paymentsApi, 
   followupsApi, whatsappApi, qrApi, reportsApi, digitalProfileApi,
-  authApi, notificationsApi, settingsApi
+  authApi, notificationsApi, settingsApi, rolesApi
 } from '../services/api';
 
 export type ScreenType = 
@@ -24,6 +25,7 @@ export type ScreenType =
   | 'billing' 
   | 'qr' 
   | 'reports' 
+  | 'roles'
   | 'team' 
   | 'integrations' 
   | 'settings';
@@ -104,6 +106,15 @@ interface AppState {
   addProduct: (product: Omit<Product, 'id'>) => Product;
   updateProduct: (productId: number, patch: Partial<Product>) => void;
   deleteProduct: (productId: number) => void;
+
+  // Roles & Permissions State
+  roles: RoleRecord[];
+  permissionGroups: PermissionCategoryGroup[];
+  fetchRoles: () => Promise<void>;
+  createRole: (roleData: { display_name: string; name?: string; description?: string; permissions?: string[] }) => Promise<RoleRecord>;
+  updateRole: (id: number, patch: { display_name?: string; description?: string; permissions?: string[] }) => Promise<RoleRecord>;
+  deleteRole: (id: number) => Promise<void>;
+
   fetchInitialData: () => Promise<void>;
 }
 
@@ -272,13 +283,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   digitalProfile: emptyDigitalProfile,
   profileEvents: [],
   settings: {},
+  roles: [],
+  permissionGroups: [],
 
   fetchInitialData: async () => {
     try {
       const [
         kpis, leads, customers, quotations, invoices, payments,
         followups, conversations, allMessages, templates, qrCodes, digitalProfile, products,
-        users, currentUser, notifications, settings
+        users, currentUser, notifications, settings, roles, permissionGroups
       ] = await Promise.all([
         reportsApi.getKpis().catch(() => null),
         leadsApi.getAll().catch(() => []),
@@ -297,6 +310,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         authApi.getCurrentUser().catch(() => null),
         notificationsApi.getAll().catch(() => []),
         settingsApi.getSettings().catch(() => ({})),
+        rolesApi.getAll().catch(() => []),
+        rolesApi.getPermissions().catch(() => []),
       ]);
 
       // Group all messages by conversation_id
@@ -328,6 +343,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentUser: currentUser || (Array.isArray(users) && users.length > 0 ? users[0] : state.currentUser),
         notifications: Array.isArray(notifications) ? notifications : [],
         settings: settings || {},
+        roles: Array.isArray(roles) ? roles : [],
+        permissionGroups: Array.isArray(permissionGroups) ? permissionGroups : [],
       }));
     } catch (err) {
       console.warn('[Store] Initial data fetch notice:', err);
@@ -919,5 +936,43 @@ export const useAppStore = create<AppState>((set, get) => ({
       products: state.products.filter(p => p.id !== productId)
     }));
     digitalProfileApi.deleteProduct(productId).catch(e => console.warn('Failed to delete product in DB:', e));
+  },
+
+  fetchRoles: async () => {
+    try {
+      const roles = await rolesApi.getAll();
+      if (Array.isArray(roles)) {
+        set({ roles });
+      }
+    } catch (e) {
+      console.warn('Failed to fetch roles:', e);
+    }
+  },
+
+  createRole: async (roleData) => {
+    const created = await rolesApi.create(roleData);
+    if (created && created.id) {
+      set(state => ({
+        roles: [...state.roles, created]
+      }));
+    }
+    return created;
+  },
+
+  updateRole: async (id, patch) => {
+    const updated = await rolesApi.update(id, patch);
+    if (updated && updated.id) {
+      set(state => ({
+        roles: state.roles.map(r => r.id === id ? updated : r)
+      }));
+    }
+    return updated;
+  },
+
+  deleteRole: async (id) => {
+    await rolesApi.delete(id);
+    set(state => ({
+      roles: state.roles.filter(r => r.id !== id)
+    }));
   }
 }));

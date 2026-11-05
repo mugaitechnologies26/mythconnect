@@ -14,6 +14,7 @@ const digitalProfileRoutes = require('./digitalProfileRoutes');
 const reportRoutes = require('./reportRoutes');
 const settingsRoutes = require('./settingsRoutes');
 const notificationRoutes = require('./notificationRoutes');
+const roleRoutes = require('./roleRoutes');
 
 const reportController = require('../controllers/reportController');
 
@@ -45,5 +46,6 @@ router.use('/digital-profile', digitalProfileRoutes);
 router.use('/reports', reportRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/roles', roleRoutes);
 
 module.exports = router;

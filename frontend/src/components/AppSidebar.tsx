@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { 
   LayoutDashboard, Users, MessageSquare, Clock, UserCheck, 
   GitPullRequest, FileText, Receipt, QrCode, BarChart3, 
-  ShieldCheck, Sliders, ChevronLeft, ChevronRight, LogOut, CreditCard,
+  Shield, ShieldCheck, Sliders, ChevronLeft, ChevronRight, LogOut, CreditCard,
   Contact
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
@@ -48,6 +48,7 @@ export const AppSidebar: React.FC = () => {
     { key: 'billing', label: 'Billing & Payments', icon: CreditCard },
     { key: 'qr', label: 'QR Manager', icon: QrCode },
     { key: 'reports', label: 'Reports', icon: BarChart3 },
+    { key: 'roles', label: 'User Roles', icon: Shield },
     { key: 'team', label: 'Team', icon: ShieldCheck },
     { key: 'integrations', label: 'Integrations', icon: Sliders },
     { key: 'settings', label: 'Settings', icon: Sliders },

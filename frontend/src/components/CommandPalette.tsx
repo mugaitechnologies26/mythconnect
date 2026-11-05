@@ -70,6 +70,7 @@ export const CommandPalette: React.FC = () => {
     { label: 'Sales Pipeline (Kanban)', screen: 'pipeline', desc: 'Manage deal stages and revenue pipeline' },
     { label: 'Create New Quotation', screen: 'quotations', desc: 'Draft formal client proposal with 18% GST' },
     { label: 'Generate QR Code', screen: 'qr', desc: 'Create trackable dynamic QR codes' },
+    { label: 'User Roles & Access', screen: 'roles', desc: 'Create and manage user roles & RBAC access' },
   ];
 
   return (

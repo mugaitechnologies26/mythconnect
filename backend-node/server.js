@@ -67,6 +67,7 @@ const apiWelcomePayload = {
     whatsapp: 'GET /api/whatsapp/conversations',
     digitalProfile: 'GET /api/digital-profile',
     qrCodes: 'GET /api/qr/codes',
+    roles: 'GET /api/roles',
     reports: 'GET /api/reports/kpis',
     realtimeWebSocket: wsUrl,
     metaWebhook: `${config.appUrl}/webhooks/meta`,

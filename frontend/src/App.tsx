@@ -27,6 +27,7 @@ import { InvoicesScreen } from './screens/InvoicesScreen';
 import { BillingScreen } from './screens/BillingScreen';
 import { QRGeneratorScreen } from './screens/QRGeneratorScreen';
 import { ReportsScreen } from './screens/ReportsScreen';
+import { UserRolesScreen } from './screens/UserRolesScreen';
 import { TeamScreen } from './screens/TeamScreen';
 import { IntegrationsScreen } from './screens/IntegrationsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -119,6 +120,7 @@ export const App: React.FC = () => {
       case 'billing': return <BillingScreen isMobile={isMobile} />;
       case 'qr': return <QRGeneratorScreen isMobile={isMobile} />;
       case 'reports': return <ReportsScreen isMobile={isMobile} />;
+      case 'roles': return <UserRolesScreen isMobile={isMobile} />;
       case 'team': return <TeamScreen isMobile={isMobile} />;
       case 'integrations': return <IntegrationsScreen isMobile={isMobile} />;
       case 'settings': return <SettingsScreen isMobile={isMobile} />;
@@ -139,6 +141,7 @@ export const App: React.FC = () => {
     { key: 'billing', label: 'Payment Ledger' },
     { key: 'qr', label: 'Dynamic QR Generator' },
     { key: 'reports', label: 'Analytics & Reports' },
+    { key: 'roles', label: 'User Roles & Permissions' },
     { key: 'team', label: 'Team & RBAC Roles' },
     { key: 'integrations', label: 'Meta & WhatsApp Integrations' },
     { key: 'settings', label: 'Company Settings' },

@@ -1,6 +1,30 @@
 // Myth Connect.ai - Core Domain Models & Types
 
-export type RoleType = 'super_admin' | 'admin' | 'sales_manager' | 'sales_executive' | 'accounts';
+export type RoleType = 'super_admin' | 'admin' | 'sales_manager' | 'sales_executive' | 'accounts' | string;
+
+export interface PermissionItem {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+}
+
+export interface PermissionCategoryGroup {
+  category: string;
+  permissions: PermissionItem[];
+}
+
+export interface RoleRecord {
+  id: number;
+  name: string;
+  display_name: string;
+  description: string;
+  user_count?: number;
+  is_system?: boolean;
+  permissions?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface User {
   id: number;
