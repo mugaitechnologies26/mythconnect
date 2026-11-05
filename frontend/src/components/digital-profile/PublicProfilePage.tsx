@@ -47,6 +47,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
   const [copiedWifi, setCopiedWifi] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
+  const [quickMenuOpen, setQuickMenuOpen] = useState<boolean>(false);
   
   // Selected portfolio item for lightbox
   const [selectedPortfolio, setSelectedPortfolio] = useState<ProfilePortfolioItem | null>(null);
@@ -184,6 +185,133 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleQuickAction = (key: string) => {
+    setQuickMenuOpen(false);
+
+    switch (key) {
+      case 'review': {
+        if (profile.google_review_url) {
+          window.open(profile.google_review_url, '_blank');
+        } else {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(profile.business_name + ' reviews')}`, '_blank');
+        }
+        if (onTrackEvent) onTrackEvent('review_click');
+        break;
+      }
+      case 'instagram': {
+        const link = profile.social_links?.find(s => s.platform === 'instagram')?.url || ((profile as any).instagram ? ((profile as any).instagram.startsWith('http') ? (profile as any).instagram : `https://instagram.com/${(profile as any).instagram.replace('@', '')}`) : `https://instagram.com/`);
+        window.open(link, '_blank');
+        if (onTrackEvent) onTrackEvent('social_click', 'instagram');
+        break;
+      }
+      case 'youtube': {
+        const link = profile.social_links?.find(s => s.platform === 'youtube')?.url || ((profile as any).youtube ? ((profile as any).youtube.startsWith('http') ? (profile as any).youtube : `https://youtube.com/${(profile as any).youtube}`) : 'https://youtube.com');
+        window.open(link, '_blank');
+        if (onTrackEvent) onTrackEvent('social_click', 'youtube');
+        break;
+      }
+      case 'facebook': {
+        const link = profile.social_links?.find(s => s.platform === 'facebook')?.url || ((profile as any).facebook ? ((profile as any).facebook.startsWith('http') ? (profile as any).facebook : `https://facebook.com/${(profile as any).facebook}`) : 'https://facebook.com');
+        window.open(link, '_blank');
+        if (onTrackEvent) onTrackEvent('social_click', 'facebook');
+        break;
+      }
+      case 'whatsapp': {
+        handleAction('whatsapp_click');
+        break;
+      }
+      case 'twitter': {
+        const link = profile.social_links?.find(s => s.platform === 'twitter')?.url || ((profile as any).twitter ? ((profile as any).twitter.startsWith('http') ? (profile as any).twitter : `https://twitter.com/${(profile as any).twitter.replace('@', '')}`) : 'https://twitter.com');
+        window.open(link, '_blank');
+        if (onTrackEvent) onTrackEvent('social_click', 'twitter');
+        break;
+      }
+      case 'offers': {
+        const el = document.getElementById('profile-offers-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+        if (onTrackEvent) onTrackEvent('offers_view');
+        break;
+      }
+      case 'linkedin': {
+        const link = profile.social_links?.find(s => s.platform === 'linkedin')?.url || ((profile as any).linkedin ? ((profile as any).linkedin.startsWith('http') ? (profile as any).linkedin : `https://linkedin.com/in/${(profile as any).linkedin}`) : 'https://linkedin.com');
+        window.open(link, '_blank');
+        if (onTrackEvent) onTrackEvent('social_click', 'linkedin');
+        break;
+      }
+      case 'website': {
+        handleAction('website_click');
+        break;
+      }
+      case 'email': {
+        handleAction('email_click');
+        break;
+      }
+      case 'catalogue': {
+        const el = document.getElementById('profile-catalogues-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+        if (onTrackEvent) onTrackEvent('catalogue_view');
+        break;
+      }
+      case 'map': {
+        handleAction('map_click');
+        break;
+      }
+      case 'call': {
+        handleAction('call_click');
+        break;
+      }
+      case 'save_contact': {
+        handleAction('vcard_click');
+        break;
+      }
+      case 'upi': {
+        const el = document.getElementById('profile-upi-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+        if (onTrackEvent) onTrackEvent('upi_view');
+        break;
+      }
+      case 'play_store': {
+        const playUrl = (profile as any).play_store_url || `https://play.google.com/store/search?q=${encodeURIComponent(profile.business_name)}&c=apps`;
+        window.open(playUrl, '_blank');
+        if (onTrackEvent) onTrackEvent('play_store_click');
+        break;
+      }
+      case 'wifi': {
+        const el = document.getElementById('profile-wifi-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+        if (onTrackEvent) onTrackEvent('wifi_view');
+        break;
+      }
+      case 'shop': {
+        const el = document.getElementById('profile-shop-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+        if (onTrackEvent) onTrackEvent('shop_view');
+        break;
+      }
+      case 'digital_profile': {
+        const topEl = document.getElementById('profile-top-anchor');
+        if (topEl) {
+          topEl.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   const handleOpenProductEnquiry = (product: Product) => {
     setEnquiryProduct(product);
     setEnquiryMessage(`Hi, I am interested in purchasing/enquiring about ${product.name} (₹${(product.discount_price || product.unit_price).toLocaleString('en-IN')}). Please contact me.`);
@@ -273,7 +401,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
   const primaryCol = profile.primary_color || '#1565E8';
 
   return (
-    <div className="digital-profile-public-container" style={{
+    <div id="profile-top-anchor" className="digital-profile-public-container" style={{
       width: '100%',
       maxWidth: isPreview ? '100%' : '520px',
       margin: '0 auto',
@@ -862,7 +990,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
       {/* 7. MINI SHOP & CRM PRODUCT CATALOG */}
       {shopProducts.length > 0 && (
-        <div style={{ padding: '0 20px', marginBottom: 24 }}>
+        <div id="profile-shop-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -1093,7 +1221,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
       {/* 8. ACTIVE FESTIVE OFFERS & PROMOTIONS */}
       {profile.offers && profile.offers.filter(o => o.enabled).length > 0 && (
-        <div style={{ padding: '0 20px', marginBottom: 24 }}>
+        <div id="profile-offers-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -1193,7 +1321,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
       {/* 9. CATALOGUE DOWNLOAD & PDF VIEWER */}
       {profile.catalogues && profile.catalogues.filter(c => c.enabled).length > 0 && (
-        <div style={{ padding: '0 20px', marginBottom: 24 }}>
+        <div id="profile-catalogues-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <h2 style={{
             fontSize: 17,
             fontWeight: 800,
@@ -1479,7 +1607,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
       {/* 15. UPI PAYMENT BOX */}
       {profile.upi_id && (
-        <div style={{ padding: '0 20px', marginBottom: 24 }}>
+        <div id="profile-upi-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             backgroundColor: cardBg,
             borderRadius: 16,
@@ -1548,7 +1676,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
       {/* 16. WI-FI DETAILS (If enabled) */}
       {profile.wifi_enabled && profile.wifi_ssid && (
-        <div style={{ padding: '0 20px', marginBottom: 24 }}>
+        <div id="profile-wifi-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             backgroundColor: cardBg,
             borderRadius: 16,
@@ -2259,6 +2387,523 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
               {copiedLink ? <Check size={16} /> : <Copy size={16} />}
               <span>{copiedLink ? 'Link Copied to Clipboard!' : 'Copy Public Profile Link'}</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 22. FLOATING SIX-DOT MENU BUTTON ON THE SIDE */}
+      <button
+        onClick={() => setQuickMenuOpen(true)}
+        aria-label="Open Quick Menu"
+        title="Quick Actions Menu"
+        style={{
+          position: 'fixed',
+          right: isPreview ? 8 : 'max(14px, calc(50% - 250px))',
+          top: '46%',
+          transform: 'translateY(-50%)',
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
+          backgroundColor: '#FFFFFF',
+          border: '1.5px solid #E2E8F0',
+          boxShadow: '0 4px 18px rgba(11, 31, 58, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 60,
+          color: '#0B1F3A',
+          transition: 'all 0.15s ease',
+          outline: 'none'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-50%) scale(1.08)';
+          e.currentTarget.style.boxShadow = '0 6px 22px rgba(21, 101, 232, 0.25)';
+          e.currentTarget.style.borderColor = primaryCol;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(-50%)';
+          e.currentTarget.style.boxShadow = '0 4px 18px rgba(11, 31, 58, 0.2)';
+          e.currentTarget.style.borderColor = '#E2E8F0';
+        }}
+      >
+        <svg width="18" height="22" viewBox="0 0 14 20" fill="currentColor">
+          <circle cx="3.5" cy="3.5" r="2.2" fill="#0B1F3A" />
+          <circle cx="10.5" cy="3.5" r="2.2" fill="#0B1F3A" />
+          <circle cx="3.5" cy="10" r="2.2" fill="#0B1F3A" />
+          <circle cx="10.5" cy="10" r="2.2" fill="#0B1F3A" />
+          <circle cx="3.5" cy="16.5" r="2.2" fill="#0B1F3A" />
+          <circle cx="10.5" cy="16.5" r="2.2" fill="#0B1F3A" />
+        </svg>
+      </button>
+
+      {/* 23. QUICK ACTIONS & SERVICES MODAL (GRID WITH LOGOS) */}
+      {quickMenuOpen && (
+        <div
+          onClick={() => setQuickMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(11, 31, 58, 0.65)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: 12
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#F0F5FD',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 420,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 45px rgba(11, 31, 58, 0.3)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              padding: '14px 18px',
+              borderBottom: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  backgroundColor: '#EEF4FF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <svg width="14" height="18" viewBox="0 0 14 20" fill="currentColor">
+                    <circle cx="3.5" cy="3.5" r="2" fill="#1565E8" />
+                    <circle cx="10.5" cy="3.5" r="2" fill="#1565E8" />
+                    <circle cx="3.5" cy="10" r="2" fill="#1565E8" />
+                    <circle cx="10.5" cy="10" r="2" fill="#1565E8" />
+                    <circle cx="3.5" cy="16.5" r="2" fill="#1565E8" />
+                    <circle cx="10.5" cy="16.5" r="2" fill="#1565E8" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 14.5, fontWeight: 800, color: '#0B1F3A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    Quick Directory
+                  </h3>
+                  <span style={{ fontSize: 11, color: '#64748B' }}>
+                    Tap any option to connect instantly
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setQuickMenuOpen(false)}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '50%',
+                  backgroundColor: '#F1F5F9',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* 3-Column Grid of 19 Items with Exact Logos */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '14px 10px 18px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 10
+            }}>
+              {[
+                // Row 1
+                {
+                  key: 'review',
+                  label: 'Review',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+                      <g transform="translate(12, 8) scale(0.8)">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                      </g>
+                      <g fill="#F59E0B" transform="translate(11, 30)">
+                        {[0, 5.5, 11, 16.5, 22].map((x, i) => (
+                          <path key={i} d={`M${x + 2} 0l.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.7-1.4.7.3-1.6-1.2-1.1 1.6-.2z`} />
+                        ))}
+                      </g>
+                    </svg>
+                  )
+                },
+                {
+                  key: 'instagram',
+                  label: 'Instagram',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="ig_menu_grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#f09433" />
+                          <stop offset="25%" stopColor="#e6683c" />
+                          <stop offset="50%" stopColor="#dc2743" />
+                          <stop offset="75%" stopColor="#cc2366" />
+                          <stop offset="100%" stopColor="#bc1888" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#ig_menu_grad)" />
+                      <rect x="11" y="11" width="26" height="26" rx="7" fill="none" stroke="#FFFFFF" strokeWidth="2.8" />
+                      <circle cx="24" cy="24" r="6" fill="none" stroke="#FFFFFF" strokeWidth="2.8" />
+                      <circle cx="31" cy="17" r="1.5" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'youtube',
+                  label: 'Youtube',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#FF0000" />
+                      <path d="M37 18c-.3-1.4-1.4-2.5-2.8-2.8-2.5-.7-10.2-.7-10.2-.7s-7.7 0-10.2.7c-1.4.3-2.5 1.4-2.8 2.8-.7 2.5-.7 6-.7 6s0 3.5.7 6c.3 1.4 1.4 2.5 2.8 2.8 2.5.7 10.2.7 10.2.7s7.7 0 10.2-.7c1.4-.3 2.5-1.4 2.8-2.8.7-2.5.7-6 .7-6s0-3.5-.7-6z" fill="#FF0000"/>
+                      <path d="M21 28l8-4-8-4v8z" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                // Row 2
+                {
+                  key: 'facebook',
+                  label: 'Facebook',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#1877F2" />
+                      <path d="M29 25h-4.5v15H18V25h-3v-5h3v-3.5c0-4.1 2.5-6.5 6.3-6.5 1.8 0 3.7.3 3.7.3v4.1h-2.1c-2 0-2.7 1.3-2.7 2.6V20h4.7l-.9 5z" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'whatsapp',
+                  label: 'Whatsapp',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#25D366" />
+                      <path d="M24 10c-7.7 0-14 6.3-14 14 0 2.5.7 4.8 1.9 6.9L10 38l7.3-1.9c2 1.1 4.3 1.9 6.7 1.9 7.7 0 14-6.3 14-14s-6.3-14-14-14zm7.2 19.5c-.3.9-1.8 1.6-2.5 1.7-.7.1-1.6.2-5.3-1.3-4.5-1.9-7.4-6.4-7.6-6.7-.2-.3-1.8-2.4-1.8-4.6 0-2.2 1.1-3.2 1.5-3.7.4-.4.9-.6 1.4-.6h.5c.4 0 .8.1 1.2 1 .5 1.1 1.6 3.9 1.7 4.2.1.3.2.7 0 1.1-.2.4-.3.6-.6.9-.3.3-.6.6-.9.9-.3.3-.6.6-.3 1.2.4.6 1.7 2.8 3.7 4.5 2.6 2.3 4.7 3 5.4 3.4.7.4 1.1.3 1.5-.1.4-.5 1.7-2 2.2-2.7.5-.7 1-.6 1.6-.4.7.2 4.2 2 4.9 2.3.7.4 1.2.6 1.4.9.2.4.2 2.1-.1 3z" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'twitter',
+                  label: 'Twitter',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#000000" />
+                      <path d="M14 13h4.6l7.4 10.6 8.3-10.6h4.5L27.6 25l12.4 16h-4.6l-8.6-11.8L17.3 41H12.8l12-14.7L14 13zm6.2 3.3L31.8 37.7h2.5L22.7 16.3h-2.5z" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                // Row 3
+                {
+                  key: 'offers',
+                  label: 'Offers',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="off_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#FF1361" />
+                          <stop offset="100%" stopColor="#FFF800" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#off_menu_grad)" />
+                      <g transform="translate(6, 6)">
+                        <text x="18" y="17" fill="#FFFFFF" fontSize="13" fontWeight="900" textAnchor="middle" fontFamily="'Outfit', sans-serif">%</text>
+                        <rect x="2" y="21" width="32" height="12" rx="4" fill="#0B1F3A" />
+                        <text x="18" y="30" fill="#FFF800" fontSize="7.5" fontWeight="900" textAnchor="middle" letterSpacing="0.8" fontFamily="'Outfit', sans-serif">OFFERS</text>
+                      </g>
+                    </svg>
+                  )
+                },
+                {
+                  key: 'linkedin',
+                  label: 'Linked In',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#0A66C2" />
+                      <path d="M15 19h5v15h-5zM17.5 12c-1.6 0-2.8 1.2-2.8 2.7 0 1.5 1.2 2.7 2.8 2.7s2.8-1.2 2.8-2.7c0-1.5-1.2-2.7-2.8-2.7zM22.5 19h4.8v2.1h.1c.7-1.3 2.3-2.6 4.8-2.6 5.1 0 6.1 3.4 6.1 7.7V34h-5v-6.9c0-1.6 0-3.8-2.3-3.8-2.3 0-2.7 1.8-2.7 3.6V34h-5.8V19z" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'website',
+                  label: 'Website',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="web_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#38BDF8" />
+                          <stop offset="100%" stopColor="#0284C7" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#web_menu_grad)" />
+                      <circle cx="24" cy="24" r="13" fill="none" stroke="#FFFFFF" strokeWidth="2.4" />
+                      <ellipse cx="24" cy="24" rx="6.5" ry="13" fill="none" stroke="#FFFFFF" strokeWidth="2" />
+                      <line x1="11" y1="24" x2="37" y2="24" stroke="#FFFFFF" strokeWidth="2" />
+                      <line x1="14" y1="18" x2="34" y2="18" stroke="#FFFFFF" strokeWidth="1.6" />
+                      <line x1="14" y1="30" x2="34" y2="30" stroke="#FFFFFF" strokeWidth="1.6" />
+                    </svg>
+                  )
+                },
+                // Row 4
+                {
+                  key: 'email',
+                  label: 'Email',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="mail_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#60A5FA" />
+                          <stop offset="100%" stopColor="#2563EB" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#mail_menu_grad)" />
+                      <rect x="10" y="14" width="28" height="20" rx="3.5" fill="#FFFFFF" />
+                      <path d="M11 16l13 10 13-10" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'catalogue',
+                  label: 'Catalogue',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#F8FAFC" stroke="#E2E8F0" strokeWidth="1" />
+                      <path d="M14 10h14l8 8v20c0 1.1-.9 2-2 2H14c-1.1 0-2-.9-2-2V12c0-1.1.9-2 2-2z" fill="#FFFFFF" stroke="#EF4444" strokeWidth="2" />
+                      <path d="M28 10v8h8" fill="none" stroke="#EF4444" strokeWidth="2" />
+                      <rect x="15" y="24" width="18" height="9" rx="2" fill="#EF4444" />
+                      <text x="24" y="31" fill="#FFFFFF" fontSize="6.5" fontWeight="900" textAnchor="middle" fontFamily="'Inter', sans-serif">PDF</text>
+                    </svg>
+                  )
+                },
+                {
+                  key: 'map',
+                  label: 'Map',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="map_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#34D399" />
+                          <stop offset="50%" stopColor="#60A5FA" />
+                          <stop offset="100%" stopColor="#FBBF24" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#map_menu_grad)" />
+                      <g transform="translate(14, 11)">
+                        <path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 16 10 16s10-8.5 10-16c0-5.5-4.5-10-10-10z" fill="#EA4335" />
+                        <circle cx="10" cy="10" r="4" fill="#FFFFFF" />
+                      </g>
+                    </svg>
+                  )
+                },
+                // Row 5
+                {
+                  key: 'call',
+                  label: 'Call',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="call_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#4ADE80" />
+                          <stop offset="100%" stopColor="#16A34A" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#call_menu_grad)" />
+                      <path d="M16 14c-.6.6-.9 1.4-.9 2.2 0 6.6 5.4 12 12 12 .8 0 1.6-.3 2.2-.9l2.4-2.4c.5-.5.5-1.3 0-1.8l-4-4c-.5-.5-1.3-.5-1.8 0l-1.5 1.5c-2.3-1.2-4.2-3.1-5.4-5.4l1.5-1.5c.5-.5.5-1.3 0-1.8l-4-4c-.5-.5-1.3-.5-1.8 0L16 14z" fill="#FFFFFF" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'save_contact',
+                  label: 'Save Contact',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="vcard_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#38BDF8" />
+                          <stop offset="100%" stopColor="#1D4ED8" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#vcard_menu_grad)" />
+                      <rect x="15" y="11" width="22" height="26" rx="4" fill="#FFFFFF" />
+                      {[14, 19, 24, 29, 34].map((y, i) => (
+                        <rect key={i} x="12" y={y} width="5" height="2" rx="1" fill="#475569" />
+                      ))}
+                      <circle cx="26" cy="20" r="3.5" fill="#1D4ED8" />
+                      <path d="M20 30c0-3.3 2.7-5 6-5s6 1.7 6 5z" fill="#1D4ED8" />
+                    </svg>
+                  )
+                },
+                {
+                  key: 'upi',
+                  label: 'UPI',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="upi_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#FDE047" />
+                          <stop offset="100%" stopColor="#EAB308" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#upi_menu_grad)" />
+                      <g transform="translate(6, 12)">
+                        <text x="18" y="16" fill="#0B1F3A" fontSize="12" fontWeight="900" textAnchor="middle" fontFamily="'Outfit', sans-serif">UPI</text>
+                        <path d="M26 10l4 4-4 4" fill="none" stroke="#0B1F3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <text x="18" y="24" fill="#0B1F3A" fontSize="3.8" fontWeight="800" textAnchor="middle" letterSpacing="0.2" fontFamily="'Inter', sans-serif">UNIFIED PAYMENTS</text>
+                      </g>
+                    </svg>
+                  )
+                },
+                // Row 6
+                {
+                  key: 'play_store',
+                  label: 'Play Store',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+                      <g transform="translate(13, 10)">
+                        <path d="M1 1.5l14 13.5L1 28.5V1.5z" fill="#00E5FF" />
+                        <path d="M15 15L1 1.5C1.8.8 3 .6 4.1 1.3l15 8.7L15 15z" fill="#00C853" />
+                        <path d="M19.1 10l3.8 2.2c1.4.8 1.4 2.8 0 3.6L19.1 18 15 15l4.1-5z" fill="#FFD600" />
+                        <path d="M15 15l-14 13.5c-.8.7-1.3.3-1.3-.8V1.5L15 15z" fill="#0091FF" />
+                        <path d="M4.1 28.7l15-8.7-4.1-5-14 13.5c-.3.3 1.9.1 3.1.2z" fill="#FF3D00" />
+                      </g>
+                    </svg>
+                  )
+                },
+                {
+                  key: 'wifi',
+                  label: 'Wi-Fi',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="wifi_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#38BDF8" />
+                          <stop offset="100%" stopColor="#0284C7" />
+                        </linearGradient>
+                      </defs>
+                      <rect width="48" height="48" rx="12" fill="url(#wifi_menu_grad)" />
+                      <g transform="translate(10, 11)" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M1 6c8-7 19-7 26 0" />
+                        <path d="M5 11c5.5-5 13.5-5 18 0" />
+                        <path d="M9 16c3-3 8-3 10 0" />
+                        <circle cx="14" cy="20" r="1.5" fill="#FFFFFF" stroke="none" />
+                      </g>
+                    </svg>
+                  )
+                },
+                {
+                  key: 'shop',
+                  label: 'Shop',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <rect width="48" height="48" rx="12" fill="#F8FAFC" stroke="#E2E8F0" strokeWidth="1" />
+                      <g transform="translate(11, 10)">
+                        <path d="M2 10L6 3h14l4 7H2z" fill="#EA580C" />
+                        <path d="M6 3v7M13 3v7M20 3v7" stroke="#FFFFFF" strokeWidth="1.5" />
+                        <rect x="4" y="10" width="18" height="15" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.5" />
+                        <rect x="7" y="13" width="6" height="7" fill="#60A5FA" />
+                        <rect x="15" y="13" width="5" height="12" fill="#92400E" />
+                      </g>
+                    </svg>
+                  )
+                },
+                // Row 7
+                {
+                  key: 'digital_profile',
+                  label: 'Digital Profile',
+                  logo: (
+                    <svg width="44" height="44" viewBox="0 0 48 48">
+                      <defs>
+                        <linearGradient id="prof_menu_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#38BDF8" />
+                          <stop offset="100%" stopColor="#6366F1" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="24" cy="24" r="20" fill="url(#prof_menu_grad)" />
+                      <g transform="translate(14, 11)">
+                        <circle cx="10" cy="8" r="5" fill="#FCD34D" />
+                        <path d="M2 22c0-4.4 3.6-8 8-8s8 3.6 8 8z" fill="#F59E0B" />
+                        <path d="M4 18c-.8-.8-2-.8-2.8 0-.8.8-.8 2 0 2.8L4 23l2.8-2.2c.8-.8.8-2 0-2.8-.8-.8-2-.8-2.8 0z" fill="#EF4444" />
+                      </g>
+                    </svg>
+                  )
+                }
+              ].map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => handleQuickAction(item.key)}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 14,
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 3px 10px rgba(11, 31, 58, 0.04)',
+                    padding: '12px 4px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    textAlign: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(21, 101, 232, 0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(11, 31, 58, 0.04)';
+                  }}
+                >
+                  <div style={{
+                    width: 44,
+                    height: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {item.logo}
+                  </div>
+                  <span style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: '#0B1F3A',
+                    lineHeight: 1.2
+                  }}>
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

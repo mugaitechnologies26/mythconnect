@@ -2309,7 +2309,8 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
               flex: 1,
               overflowY: 'auto',
               backgroundColor: '#F8FAFC',
-              position: 'relative'
+              position: 'relative',
+              transform: 'translate(0, 0)'
             }}>
               <PublicProfilePage
                 profile={profile}
