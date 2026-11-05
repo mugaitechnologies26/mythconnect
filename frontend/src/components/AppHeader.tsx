@@ -10,6 +10,7 @@ export const AppHeader: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
   const { 
     currentUser, 
     switchUserRole,
+    roles: storeRoles,
     notifications, 
     markAllNotificationsRead, 
     setSearchOpen,
@@ -22,13 +23,15 @@ export const AppHeader: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  const roles: { key: RoleType; label: string }[] = [
-    { key: 'super_admin', label: 'Super Admin' },
-    { key: 'admin', label: 'Admin' },
-    { key: 'sales_manager', label: 'Sales Manager' },
-    { key: 'sales_executive', label: 'Sales Executive' },
-    { key: 'accounts', label: 'Accounts' },
-  ];
+  const rolesList: { key: RoleType; label: string }[] = storeRoles && storeRoles.length > 0
+    ? storeRoles.map(r => ({ key: r.name as RoleType, label: r.display_name }))
+    : [
+        { key: 'super_admin', label: 'Super Admin' },
+        { key: 'admin', label: 'Admin' },
+        { key: 'sales_manager', label: 'Sales Manager' },
+        { key: 'sales_executive', label: 'Sales Executive' },
+        { key: 'accounts', label: 'Accounts' },
+      ];
 
   return (
     <View style={styles.header}>
@@ -154,7 +157,7 @@ export const AppHeader: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
           {isRoleMenuOpen && (
             <View style={styles.roleDropdown}>
               <Text style={styles.roleDropdownHeader}>SWITCH ROLE (TESTING)</Text>
-              {roles.map(r => (
+              {rolesList.map(r => (
                 <TouchableOpacity
                   key={r.key}
                   style={styles.roleOption}

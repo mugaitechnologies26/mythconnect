@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Modal 
 import { Search, X, Users, UserCheck, FileText, Receipt, MessageSquare, ArrowRight } from 'lucide-react';
 import { BrandColors } from '../theme';
 import { useAppStore, ScreenType } from '../store/useAppStore';
+import { hasMenuAccess } from '../utils/rbac';
 
 export const CommandPalette: React.FC = () => {
   const { 
@@ -10,6 +11,8 @@ export const CommandPalette: React.FC = () => {
     setSearchOpen, 
     setActiveScreen, 
     navigateToLeadDetail,
+    currentUser,
+    roles,
     leads, 
     customers, 
     quotations, 
@@ -63,7 +66,7 @@ export const CommandPalette: React.FC = () => {
     inv.customer_name.toLowerCase().includes(q)
   ).slice(0, 3) : [];
 
-  const quickNav: { label: string; screen: ScreenType; desc: string }[] = [
+  const allQuickNav: { label: string; screen: ScreenType; desc: string }[] = [
     { label: 'Leads & Enquiries', screen: 'leads', desc: 'Browse all Meta, WhatsApp and Web leads' },
     { label: 'Digital Profile & Shop', screen: 'digital_profile', desc: 'Smart business card, mini shop & dynamic QR' },
     { label: 'WhatsApp Live CRM', screen: 'whatsapp', desc: 'Direct chat with incoming leads & customers' },
@@ -72,6 +75,7 @@ export const CommandPalette: React.FC = () => {
     { label: 'Generate QR Code', screen: 'qr', desc: 'Create trackable dynamic QR codes' },
     { label: 'User Roles & Access', screen: 'roles', desc: 'Create and manage user roles & RBAC access' },
   ];
+  const quickNav = allQuickNav.filter(item => hasMenuAccess(item.screen, currentUser, roles));
 
   return (
     <View style={styles.overlay}>

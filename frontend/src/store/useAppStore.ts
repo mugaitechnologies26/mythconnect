@@ -10,6 +10,7 @@ import {
   followupsApi, whatsappApi, qrApi, reportsApi, digitalProfileApi,
   authApi, notificationsApi, settingsApi, rolesApi
 } from '../services/api';
+import { hasMenuAccess } from '../utils/rbac';
 
 export type ScreenType = 
   | 'dashboard' 
@@ -220,19 +221,39 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   switchUserRole: async (role: User['role']) => {
+    let nextUser: User | null = null;
     try {
       const user = await authApi.switchRole(role);
       if (user) {
-        set({ currentUser: user });
-        return;
+        nextUser = user;
       }
     } catch (e) {
       console.warn('API switchRole notice:', e);
     }
-    const currentUsers = get().users;
-    const matched = currentUsers.find(u => u.role === role);
-    if (matched) {
-      set({ currentUser: matched });
+    if (!nextUser) {
+      const currentUsers = get().users;
+      const matched = currentUsers.find(u => u.role === role);
+      if (matched) {
+        nextUser = matched;
+      } else {
+        const roleObj = get().roles.find(r => r.name === role);
+        if (roleObj && get().currentUser) {
+          nextUser = {
+            ...get().currentUser!,
+            role: roleObj.name,
+            role_display: roleObj.display_name
+          };
+        }
+      }
+    }
+
+    if (nextUser) {
+      set({ currentUser: nextUser });
+      // Ensure the active screen is accessible in the newly selected role
+      const currentScreen = get().activeScreen;
+      if (!hasMenuAccess(currentScreen, nextUser, get().roles)) {
+        set({ activeScreen: 'dashboard' });
+      }
     }
   },
 

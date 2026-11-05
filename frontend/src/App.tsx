@@ -33,8 +33,9 @@ import { IntegrationsScreen } from './screens/IntegrationsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { DigitalProfileScreen } from './screens/DigitalProfileScreen';
 import { PublicProfilePage } from './components/digital-profile/PublicProfilePage';
+import { hasMenuAccess } from './utils/rbac';
 
-import { X, ChevronRight, LogOut } from 'lucide-react';
+import { X, ChevronRight, LogOut, Shield } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { width } = useWindowDimensions();
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
     activeSnackbar, 
     hideSnackbar,
     currentUser,
+    roles,
     logout,
     digitalProfile,
     products,
@@ -106,6 +108,30 @@ export const App: React.FC = () => {
   }
 
   const renderActiveScreen = () => {
+    // RBAC: Verify if current role has permission to access the active menu
+    if (!hasMenuAccess(activeScreen, currentUser, roles)) {
+      return (
+        <View style={styles.restrictedContainer}>
+          <View style={styles.restrictedCard}>
+            <View style={styles.restrictedIconBox}>
+              <Shield size={38} color={BrandColors.red} />
+            </View>
+            <Text style={styles.restrictedTitle}>Access Restricted</Text>
+            <Text style={styles.restrictedDesc}>
+              Your current role ({currentUser?.role_display || currentUser?.role || 'Guest'}) does not have permission to view or manage the "{activeScreen}" menu.
+            </Text>
+            <TouchableOpacity 
+              style={styles.restrictedBtn}
+              onPress={() => setActiveScreen('dashboard')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.restrictedBtnText}>Return to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     switch (activeScreen) {
       case 'dashboard': return <DashboardScreen isMobile={isMobile} />;
       case 'leads': return <LeadsScreen isMobile={isMobile} />;
@@ -147,6 +173,8 @@ export const App: React.FC = () => {
     { key: 'settings', label: 'Company Settings' },
   ];
 
+  const visibleDrawerNav = drawerNav.filter(item => hasMenuAccess(item.key, currentUser, roles));
+
   return (
     <PaperProvider theme={AppTheme}>
       <View style={styles.appContainer}>
@@ -184,7 +212,7 @@ export const App: React.FC = () => {
                 </View>
 
                 <ScrollView style={styles.drawerScroll}>
-                  {drawerNav.map(item => (
+                  {visibleDrawerNav.map(item => (
                     <TouchableOpacity
                       key={item.key}
                       style={[
@@ -325,5 +353,55 @@ const styles = StyleSheet.create({
   },
   drawerLogout: {
     padding: 8,
+  },
+  restrictedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: BrandColors.bg,
+  },
+  restrictedCard: {
+    maxWidth: 460,
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  restrictedIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  restrictedTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: BrandColors.darkNavy,
+    marginBottom: 8,
+  },
+  restrictedDesc: {
+    fontSize: 13,
+    color: BrandColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  restrictedBtn: {
+    backgroundColor: BrandColors.blue,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  restrictedBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

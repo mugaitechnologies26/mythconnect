@@ -2,11 +2,17 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { 
   Shield, Plus, Search, Edit2, Trash2, Check, X, Users, 
-  Lock, CheckSquare, Square, AlertCircle, Info, Sparkles 
+  Lock, CheckSquare, Square, AlertCircle, Info, Sparkles, LayoutGrid, KeyRound 
 } from 'lucide-react';
 import { BrandColors } from '../theme';
 import { useAppStore } from '../store/useAppStore';
-import { RoleRecord, PermissionCategoryGroup } from '../types';
+import { RoleRecord } from '../types';
+import { 
+  MENU_DEFINITIONS, 
+  isRoleMenuAccessible, 
+  getRoleAccessibleScreens,
+  MenuItemDef 
+} from '../utils/rbac';
 
 export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
   const { 
@@ -24,6 +30,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
 
   // Modal State for Create / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState<'menus' | 'permissions'>('menus');
   const [editingRole, setEditingRole] = useState<RoleRecord | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [roleCode, setRoleCode] = useState('');
@@ -71,22 +78,76 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
   // Open Create Modal
   const handleOpenCreate = () => {
     setEditingRole(null);
+    setModalTab('menus');
     setDisplayName('');
     setRoleCode('');
     setDescription('');
-    // Default: basic view permissions
-    setSelectedPermissions(['leads.view', 'whatsapp.view', 'pipeline.view', 'profile.view']);
+    // Default: give access to core sales menus
+    setSelectedPermissions([
+      'menu.dashboard', 
+      'menu.leads', 
+      'menu.whatsapp', 
+      'menu.followups',
+      'leads.view',
+      'whatsapp.view'
+    ]);
     setIsModalOpen(true);
   };
 
   // Open Edit Modal
   const handleOpenEdit = (role: RoleRecord) => {
     setEditingRole(role);
+    setModalTab('menus');
     setDisplayName(role.display_name);
     setRoleCode(role.name);
     setDescription(role.description || '');
     setSelectedPermissions(role.permissions || []);
     setIsModalOpen(true);
+  };
+
+  // Check if a specific menu permission is currently active in the form
+  const isMenuCheckedInForm = (menu: MenuItemDef): boolean => {
+    if (editingRole?.name === 'super_admin' || editingRole?.name === 'admin') {
+      return true;
+    }
+    if (selectedPermissions.includes(menu.menuPermission)) {
+      return true;
+    }
+    if (menu.fallbackPermissions.some(fp => selectedPermissions.includes(fp))) {
+      return true;
+    }
+    return false;
+  };
+
+  // Toggle Menu Access
+  const toggleMenuAccess = (menu: MenuItemDef) => {
+    const currentlyChecked = isMenuCheckedInForm(menu);
+
+    if (currentlyChecked) {
+      // Remove menu permission and any fallback permissions
+      setSelectedPermissions(prev => 
+        prev.filter(p => p !== menu.menuPermission && !menu.fallbackPermissions.includes(p))
+      );
+    } else {
+      // Add menu permission and its primary view permission
+      const toAdd = [menu.menuPermission, ...menu.fallbackPermissions.slice(0, 1)];
+      setSelectedPermissions(prev => Array.from(new Set([...prev, ...toAdd])));
+    }
+  };
+
+  // Select all menus in modal
+  const handleSelectAllMenus = () => {
+    const allMenuPerms = MENU_DEFINITIONS.map(m => m.menuPermission);
+    const viewPerms = MENU_DEFINITIONS.flatMap(m => m.fallbackPermissions.slice(0, 1));
+    setSelectedPermissions(prev => Array.from(new Set([...prev, ...allMenuPerms, ...viewPerms])));
+  };
+
+  // Clear all menus in modal (keep dashboard)
+  const handleClearAllMenus = () => {
+    const allMenuPerms = MENU_DEFINITIONS.map(m => m.menuPermission);
+    setSelectedPermissions(prev => 
+      prev.filter(p => !allMenuPerms.includes(p) && p !== 'menu.dashboard')
+    );
   };
 
   // Toggle single permission
@@ -131,7 +192,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
           description: description.trim(),
           permissions: selectedPermissions,
         });
-        showSnackbar(`Role "${displayName}" updated successfully!`, 'success');
+        showSnackbar(`Role "${displayName}" and menu access updated!`, 'success');
       } else {
         const created = await createRole({
           display_name: displayName.trim(),
@@ -139,7 +200,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
           description: description.trim(),
           permissions: selectedPermissions,
         });
-        showSnackbar(`Role "${created.display_name}" created successfully!`, 'success');
+        showSnackbar(`Role "${created.display_name}" created with custom menu access!`, 'success');
       }
       setIsModalOpen(false);
     } catch (err: any) {
@@ -191,7 +252,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
             </View>
           </View>
           <Text style={styles.pageSubtitle}>
-            Configure role boundaries, departmental privileges, and modular access control across Myth Connect.ai
+            Configure role boundaries, sidebar menu visibility, and granular operational permissions across Myth Connect.ai
           </Text>
         </View>
 
@@ -230,11 +291,11 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
 
           <View style={styles.kpiCard}>
             <View style={[styles.kpiIconBox, { backgroundColor: '#FEF3C7' }]}>
-              <Lock size={20} color={BrandColors.orange} />
+              <LayoutGrid size={20} color={BrandColors.orange} />
             </View>
             <View>
-              <Text style={styles.kpiValue}>{systemRolesCount}</Text>
-              <Text style={styles.kpiLabel}>System Protected</Text>
+              <Text style={styles.kpiValue}>{MENU_DEFINITIONS.length}</Text>
+              <Text style={styles.kpiLabel}>Configurable Menus</Text>
             </View>
           </View>
 
@@ -297,6 +358,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
           {filteredRoles.map(role => {
             const permCount = role.permissions ? role.permissions.length : 0;
             const userCount = role.user_count || 0;
+            const accessibleScreens = getRoleAccessibleScreens(role);
 
             return (
               <View key={role.id} style={styles.roleCard}>
@@ -334,32 +396,40 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
                   <View style={styles.roleMetaItem}>
                     <Users size={14} color={BrandColors.textSecondary} />
                     <Text style={styles.roleMetaText}>
-                      <Text style={{ fontWeight: '700', color: BrandColors.darkNavy }}>{userCount}</Text> {userCount === 1 ? 'user' : 'users'} assigned
+                      <Text style={{ fontWeight: '700', color: BrandColors.darkNavy }}>{userCount}</Text> {userCount === 1 ? 'user' : 'users'}
                     </Text>
                   </View>
 
                   <View style={styles.roleMetaItem}>
-                    <Shield size={14} color={BrandColors.blue} />
+                    <LayoutGrid size={14} color={BrandColors.blue} />
                     <Text style={styles.roleMetaText}>
-                      <Text style={{ fontWeight: '700', color: BrandColors.blue }}>{permCount}</Text> {permCount === 1 ? 'permission' : 'permissions'}
+                      <Text style={{ fontWeight: '700', color: BrandColors.blue }}>{accessibleScreens.length}</Text> of {MENU_DEFINITIONS.length} menus
+                    </Text>
+                  </View>
+
+                  <View style={styles.roleMetaItem}>
+                    <KeyRound size={14} color={BrandColors.green} />
+                    <Text style={styles.roleMetaText}>
+                      <Text style={{ fontWeight: '700', color: BrandColors.green }}>{permCount}</Text> perms
                     </Text>
                   </View>
                 </View>
 
-                {/* Permissions Sample Chips */}
-                <View style={styles.chipsContainer}>
-                  {role.permissions && role.permissions.slice(0, 4).map(p => (
-                    <View key={p} style={styles.permChip}>
-                      <Text style={styles.permChipText}>{p}</Text>
-                    </View>
-                  ))}
-                  {permCount > 4 && (
-                    <View style={[styles.permChip, { backgroundColor: '#F1F5F9' }]}>
-                      <Text style={[styles.permChipText, { color: BrandColors.textSecondary, fontWeight: '700' }]}>
-                        +{permCount - 4} more
-                      </Text>
-                    </View>
-                  )}
+                {/* Accessible Menus Section */}
+                <View style={styles.menuAccessBox}>
+                  <Text style={styles.menuAccessTitle}>SIDEBAR MENU ACCESS:</Text>
+                  <View style={styles.menuChipsRow}>
+                    {accessibleScreens.map(scr => {
+                      const m = MENU_DEFINITIONS.find(def => def.key === scr);
+                      if (!m) return null;
+                      return (
+                        <View key={scr} style={styles.menuBadgePill}>
+                          <View style={styles.menuDot} />
+                          <Text style={styles.menuBadgeText}>{m.label}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
 
                 {/* Card Action Buttons */}
@@ -370,7 +440,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
                     activeOpacity={0.8}
                   >
                     <Edit2 size={14} color={BrandColors.blue} />
-                    <Text style={styles.editBtnText}>Edit Permissions</Text>
+                    <Text style={styles.editBtnText}>Configure Menu & Role Access</Text>
                   </TouchableOpacity>
 
                   {!role.is_system && (
@@ -415,13 +485,36 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
                 </Text>
                 <Text style={styles.modalSubtitle}>
                   {editingRole 
-                    ? 'Modify role title, description, and granted granular permissions'
-                    : 'Define role metadata and assign functional module access'
+                    ? 'Configure accessible sidebar menus and granular operational permissions'
+                    : 'Define role metadata and assign functional navigation access'
                   }
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setIsModalOpen(false)}>
                 <X size={20} color={BrandColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Tabs Header */}
+            <View style={styles.tabNavRow}>
+              <TouchableOpacity 
+                style={[styles.tabNavItem, modalTab === 'menus' && styles.tabNavItemActive]}
+                onPress={() => setModalTab('menus')}
+              >
+                <LayoutGrid size={16} color={modalTab === 'menus' ? BrandColors.blue : BrandColors.textSecondary} />
+                <Text style={[styles.tabNavText, modalTab === 'menus' && styles.tabNavTextActive]}>
+                  1. Sidebar Menu Access ({MENU_DEFINITIONS.filter(m => isMenuCheckedInForm(m)).length}/{MENU_DEFINITIONS.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.tabNavItem, modalTab === 'permissions' && styles.tabNavItemActive]}
+                onPress={() => setModalTab('permissions')}
+              >
+                <KeyRound size={16} color={modalTab === 'permissions' ? BrandColors.blue : BrandColors.textSecondary} />
+                <Text style={[styles.tabNavText, modalTab === 'permissions' && styles.tabNavTextActive]}>
+                  2. Detailed Permissions ({selectedPermissions.length})
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -455,7 +548,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
               <View style={styles.formField}>
                 <Text style={styles.formLabel}>Role Description</Text>
                 <TextInput
-                  style={[styles.formInput, { height: 60, textAlignVertical: 'top' }]}
+                  style={[styles.formInput, { height: 50, textAlignVertical: 'top' }]}
                   placeholder="Outline responsibilities and authorization scope..."
                   value={description}
                   onChangeText={setDescription}
@@ -465,81 +558,145 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
                 />
               </View>
 
-              {/* Permissions Matrix Header */}
-              <View style={styles.permHeaderRow}>
+              {/* TAB 1: SIDEBAR MENU ACCESS */}
+              {modalTab === 'menus' && (
                 <View>
-                  <Text style={styles.permSectionTitle}>MODULE PERMISSIONS MATRIX</Text>
-                  <Text style={styles.permSectionSubtitle}>
-                    {selectedPermissions.length} of {allAvailablePermissions.length} permissions granted
-                  </Text>
-                </View>
-
-                <View style={styles.permQuickActions}>
-                  <TouchableOpacity style={styles.permQuickBtn} onPress={handleSelectAll}>
-                    <Text style={styles.permQuickBtnText}>Select All</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.permQuickBtn} onPress={handleClearAll}>
-                    <Text style={styles.permQuickBtnText}>Clear All</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Permission Groups */}
-              {permissionGroups.map(group => {
-                const groupPermNames = group.permissions.map(p => p.name);
-                const isAllSelected = groupPermNames.every(p => selectedPermissions.includes(p));
-                const selectedInGroup = groupPermNames.filter(p => selectedPermissions.includes(p)).length;
-
-                return (
-                  <View key={group.category} style={styles.permGroupCard}>
-                    <View style={styles.permGroupHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Text style={styles.permGroupTitle}>{group.category}</Text>
-                        <View style={styles.permGroupBadge}>
-                          <Text style={styles.permGroupBadgeText}>
-                            {selectedInGroup}/{groupPermNames.length}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <TouchableOpacity 
-                        style={styles.groupToggleBtn}
-                        onPress={() => toggleCategoryPermissions(groupPermNames)}
-                      >
-                        <Text style={styles.groupToggleText}>
-                          {isAllSelected ? 'Deselect Category' : 'Select All'}
-                        </Text>
-                      </TouchableOpacity>
+                  <View style={styles.permHeaderRow}>
+                    <View>
+                      <Text style={styles.permSectionTitle}>SIDEBAR MENU VISIBILITY</Text>
+                      <Text style={styles.permSectionSubtitle}>
+                        Select which menus this role will see in the dashboard sidebar and can navigate to
+                      </Text>
                     </View>
 
-                    <View style={styles.permList}>
-                      {group.permissions.map(perm => {
-                        const isChecked = selectedPermissions.includes(perm.name);
+                    <View style={styles.permQuickActions}>
+                      <TouchableOpacity style={styles.permQuickBtn} onPress={handleSelectAllMenus}>
+                        <Text style={styles.permQuickBtnText}>Enable All Menus</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.permQuickBtn} onPress={handleClearAllMenus}>
+                        <Text style={styles.permQuickBtnText}>Clear Menus</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
-                        return (
-                          <TouchableOpacity
-                            key={perm.id}
-                            style={[styles.permItem, isChecked && styles.permItemChecked]}
-                            onPress={() => togglePermission(perm.name)}
-                            activeOpacity={0.7}
-                          >
+                  <View style={styles.menuGridContainer}>
+                    {MENU_DEFINITIONS.map(menu => {
+                      const isChecked = isMenuCheckedInForm(menu);
+                      const isProtectedAdmin = editingRole?.is_system && (editingRole.name === 'super_admin' || editingRole.name === 'admin');
+
+                      return (
+                        <TouchableOpacity
+                          key={menu.key}
+                          style={[
+                            styles.menuGridCard,
+                            isChecked && styles.menuGridCardActive,
+                            isProtectedAdmin && { opacity: 0.85 }
+                          ]}
+                          onPress={() => !isProtectedAdmin && toggleMenuAccess(menu)}
+                          activeOpacity={0.7}
+                          disabled={isProtectedAdmin}
+                        >
+                          <View style={styles.menuGridTop}>
                             <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
                               {isChecked && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
                             </View>
-
-                            <View style={{ flex: 1 }}>
-                              <Text style={[styles.permName, isChecked && styles.permNameActive]}>
-                                {perm.name}
-                              </Text>
-                              <Text style={styles.permDesc}>{perm.description}</Text>
+                            <View style={styles.menuBadgeCategory}>
+                              <Text style={styles.menuBadgeCategoryText}>{menu.category}</Text>
                             </View>
-                          </TouchableOpacity>
-                        );
-                      })}
+                          </View>
+
+                          <Text style={[styles.menuGridLabel, isChecked && styles.menuGridLabelActive]}>
+                            {menu.label}
+                          </Text>
+                          <Text style={styles.menuGridDesc} numberOfLines={2}>
+                            {menu.description}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* TAB 2: DETAILED PERMISSIONS MATRIX */}
+              {modalTab === 'permissions' && (
+                <View>
+                  <View style={styles.permHeaderRow}>
+                    <View>
+                      <Text style={styles.permSectionTitle}>FUNCTIONAL PERMISSIONS MATRIX</Text>
+                      <Text style={styles.permSectionSubtitle}>
+                        {selectedPermissions.length} of {allAvailablePermissions.length} capabilities active
+                      </Text>
+                    </View>
+
+                    <View style={styles.permQuickActions}>
+                      <TouchableOpacity style={styles.permQuickBtn} onPress={handleSelectAll}>
+                        <Text style={styles.permQuickBtnText}>Select All</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.permQuickBtn} onPress={handleClearAll}>
+                        <Text style={styles.permQuickBtnText}>Clear All</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                );
-              })}
+
+                  {/* Permission Groups */}
+                  {permissionGroups.map(group => {
+                    const groupPermNames = group.permissions.map(p => p.name);
+                    const isAllSelected = groupPermNames.every(p => selectedPermissions.includes(p));
+                    const selectedInGroup = groupPermNames.filter(p => selectedPermissions.includes(p)).length;
+
+                    return (
+                      <View key={group.category} style={styles.permGroupCard}>
+                        <View style={styles.permGroupHeader}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={styles.permGroupTitle}>{group.category}</Text>
+                            <View style={styles.permGroupBadge}>
+                              <Text style={styles.permGroupBadgeText}>
+                                {selectedInGroup}/{groupPermNames.length}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <TouchableOpacity 
+                            style={styles.groupToggleBtn}
+                            onPress={() => toggleCategoryPermissions(groupPermNames)}
+                          >
+                            <Text style={styles.groupToggleText}>
+                              {isAllSelected ? 'Deselect Category' : 'Select All'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.permList}>
+                          {group.permissions.map(perm => {
+                            const isChecked = selectedPermissions.includes(perm.name);
+
+                            return (
+                              <TouchableOpacity
+                                key={perm.id}
+                                style={[styles.permItem, isChecked && styles.permItemChecked]}
+                                onPress={() => togglePermission(perm.name)}
+                                activeOpacity={0.7}
+                              >
+                                <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
+                                  {isChecked && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+                                </View>
+
+                                <View style={{ flex: 1 }}>
+                                  <Text style={[styles.permName, isChecked && styles.permNameActive]}>
+                                    {perm.name}
+                                  </Text>
+                                  <Text style={styles.permDesc}>{perm.description}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </ScrollView>
 
             {/* Modal Footer */}
@@ -561,7 +718,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={styles.saveBtnText}>
-                    {editingRole ? 'Update Role' : 'Create Role'}
+                    {editingRole ? 'Update Role & Menu Access' : 'Create Role'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -581,7 +738,7 @@ export const UserRolesScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) =
             <Text style={styles.deleteTitle}>Delete User Role?</Text>
             <Text style={styles.deleteDesc}>
               Are you sure you want to delete role <Text style={{ fontWeight: '700', color: BrandColors.darkNavy }}>"{roleToDelete?.display_name}"</Text>? 
-              This action permanently removes this role and its permission assignments.
+              This action permanently removes this role and its menu access assignments.
             </Text>
 
             <View style={styles.deleteActions}>
@@ -855,39 +1012,62 @@ const styles = StyleSheet.create({
   roleMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: BrandColors.border,
-    marginVertical: 14,
+    marginVertical: 12,
   },
   roleMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   roleMetaText: {
     fontSize: 12,
     color: BrandColors.textSecondary,
   },
-  chipsContainer: {
+  menuAccessBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+  menuAccessTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: BrandColors.textSecondary,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  menuChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 16,
   },
-  permChip: {
-    backgroundColor: '#F8FAFC',
+  menuBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  permChipText: {
+  menuDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BrandColors.blue,
+  },
+  menuBadgeText: {
     fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#334155',
+    fontWeight: '600',
+    color: BrandColors.darkNavy,
   },
   cardActions: {
     flexDirection: 'row',
@@ -901,8 +1081,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: BrandColors.blueLight,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
   },
   editBtnText: {
     fontSize: 12,
@@ -912,7 +1092,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     width: 36,
     height: 36,
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -952,8 +1132,8 @@ const styles = StyleSheet.create({
   },
   modalDialog: {
     width: '100%',
-    maxWidth: 760,
-    maxHeight: '90vh' as any,
+    maxWidth: 780,
+    maxHeight: '92vh' as any,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
@@ -964,7 +1144,7 @@ const styles = StyleSheet.create({
   },
   modalDialogMobile: {
     maxWidth: '100%',
-    maxHeight: '95vh' as any,
+    maxHeight: '96vh' as any,
   },
   modalHeader: {
     padding: 20,
@@ -984,20 +1164,49 @@ const styles = StyleSheet.create({
     color: BrandColors.textSecondary,
     marginTop: 2,
   },
+  tabNavRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: BrandColors.border,
+    backgroundColor: '#F8FAFC',
+  },
+  tabNavItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabNavItemActive: {
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: BrandColors.blue,
+  },
+  tabNavText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: BrandColors.textSecondary,
+  },
+  tabNavTextActive: {
+    color: BrandColors.blue,
+    fontWeight: '700',
+  },
   modalBody: {
     padding: 20,
-    maxHeight: '65vh' as any,
+    maxHeight: '62vh' as any,
   },
   formRow: {
     flexDirection: 'row',
     gap: 16,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   formCol: {
     flex: 1,
   },
   formField: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   formLabel: {
     fontSize: 12,
@@ -1023,7 +1232,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 14,
     paddingBottom: 8,
     borderBottomWidth: 1,
@@ -1037,8 +1246,8 @@ const styles = StyleSheet.create({
   },
   permSectionSubtitle: {
     fontSize: 11,
-    color: BrandColors.blue,
-    fontWeight: '600',
+    color: BrandColors.textSecondary,
+    fontWeight: '500',
     marginTop: 2,
   },
   permQuickActions: {
@@ -1056,6 +1265,61 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: BrandColors.darkNavy,
   },
+
+  // Menu Grid Styles in Modal
+  menuGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  menuGridCard: {
+    width: 'calc(50% - 6px)' as any,
+    minWidth: 260,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    padding: 12,
+  },
+  menuGridCardActive: {
+    borderColor: BrandColors.blue,
+    backgroundColor: '#F0F7FF',
+  },
+  menuGridTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  menuBadgeCategory: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  menuBadgeCategoryText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#475569',
+    letterSpacing: 0.5,
+  },
+  menuGridLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: BrandColors.darkNavy,
+    marginBottom: 2,
+  },
+  menuGridLabelActive: {
+    color: BrandColors.blue,
+  },
+  menuGridDesc: {
+    fontSize: 11,
+    color: BrandColors.textSecondary,
+    lineHeight: 15,
+  },
+
+  // Permission Group Styles in Modal
   permGroupCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
@@ -1125,7 +1389,6 @@ const styles = StyleSheet.create({
     borderColor: '#94A3B8',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 2,
     backgroundColor: '#FFFFFF',
   },
   checkboxActive: {
@@ -1171,7 +1434,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: BrandColors.blue,
-    minWidth: 110,
+    minWidth: 130,
     alignItems: 'center',
     justifyContent: 'center',
   },

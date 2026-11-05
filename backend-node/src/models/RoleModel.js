@@ -53,20 +53,35 @@ const DEFAULT_PERMISSIONS = [
 
   // System & Settings
   { name: 'settings.manage', category: 'System Settings', description: 'Configure integrations, company info, and API keys' },
+
+  // Sidebar Menu Access Permissions
+  { name: 'menu.dashboard', category: 'Sidebar Menus', description: 'Access to Dashboard Overview menu' },
+  { name: 'menu.leads', category: 'Sidebar Menus', description: 'Access to Leads & Enquiries menu' },
+  { name: 'menu.whatsapp', category: 'Sidebar Menus', description: 'Access to WhatsApp Live CRM menu' },
+  { name: 'menu.followups', category: 'Sidebar Menus', description: 'Access to Scheduled Follow-ups menu' },
+  { name: 'menu.customers', category: 'Sidebar Menus', description: 'Access to Customer Accounts menu' },
+  { name: 'menu.pipeline', category: 'Sidebar Menus', description: 'Access to Sales Pipeline (Kanban) menu' },
+  { name: 'menu.digital_profile', category: 'Sidebar Menus', description: 'Access to Digital Profile & Mini Shop menu' },
+  { name: 'menu.quotations', category: 'Sidebar Menus', description: 'Access to Quotations & Proposals menu' },
+  { name: 'menu.invoices', category: 'Sidebar Menus', description: 'Access to Invoices & Billing menu' },
+  { name: 'menu.billing', category: 'Sidebar Menus', description: 'Access to Payment Ledger menu' },
+  { name: 'menu.qr', category: 'Sidebar Menus', description: 'Access to Dynamic QR Codes menu' },
+  { name: 'menu.reports', category: 'Sidebar Menus', description: 'Access to Analytics & Reports menu' },
+  { name: 'menu.roles', category: 'Sidebar Menus', description: 'Access to User Roles & Permissions menu' },
+  { name: 'menu.team', category: 'Sidebar Menus', description: 'Access to Team Directory menu' },
+  { name: 'menu.integrations', category: 'Sidebar Menus', description: 'Access to Meta & WhatsApp Integrations menu' },
+  { name: 'menu.settings', category: 'Sidebar Menus', description: 'Access to Company Settings menu' },
 ];
 
 const SYSTEM_ROLES = ['super_admin', 'admin', 'sales_manager', 'sales_executive', 'accounts'];
 
 class RoleModel {
   /**
-   * Seed default permissions and initial role mappings if empty
+   * Seed default permissions and initial role mappings if empty or missing
    */
   static async ensurePermissionsSeed() {
     try {
-      const [pCount] = await db.query('SELECT COUNT(*) AS total FROM permissions');
-      if (pCount && pCount.total > 0) return;
-
-      logger.info('ROLES', 'Seeding default permissions matrix into database...');
+      // Ensure all default permissions exist in permissions table
       for (const p of DEFAULT_PERMISSIONS) {
         await db.query(
           'INSERT IGNORE INTO permissions (name, category, description) VALUES (?, ?, ?)',
@@ -82,7 +97,7 @@ class RoleModel {
       // Define default mappings
       const rolePerms = {
         super_admin: allPerms.map(p => p.id),
-        admin: allPerms.filter(p => p.name !== 'settings.manage' || true).map(p => p.id),
+        admin: allPerms.map(p => p.id),
         sales_manager: allPerms.filter(p => 
           p.name.startsWith('leads.') || 
           p.name.startsWith('whatsapp.') || 
@@ -91,16 +106,21 @@ class RoleModel {
           p.name.startsWith('customers.') || 
           p.name.startsWith('quotations.') || 
           p.name.startsWith('reports.') || 
-          p.name === 'team.view'
+          p.name === 'team.view' ||
+          ['menu.dashboard', 'menu.leads', 'menu.whatsapp', 'menu.followups', 
+           'menu.customers', 'menu.pipeline', 'menu.quotations', 'menu.reports', 'menu.team'].includes(p.name)
         ).map(p => p.id),
         sales_executive: allPerms.filter(p => 
           ['leads.view', 'leads.create', 'leads.edit', 'whatsapp.view', 'whatsapp.send', 
            'pipeline.view', 'pipeline.manage', 'followups.manage', 'customers.view', 
-           'quotations.view', 'quotations.create', 'profile.view'].includes(p.name)
+           'quotations.view', 'quotations.create', 'profile.view',
+           'menu.dashboard', 'menu.leads', 'menu.whatsapp', 'menu.followups', 
+           'menu.customers', 'menu.pipeline', 'menu.digital_profile', 'menu.quotations'].includes(p.name)
         ).map(p => p.id),
         accounts: allPerms.filter(p => 
           ['customers.view', 'quotations.view', 'invoices.view', 'invoices.create', 
-           'invoices.payments', 'reports.view'].includes(p.name)
+           'invoices.payments', 'reports.view',
+           'menu.dashboard', 'menu.customers', 'menu.quotations', 'menu.invoices', 'menu.billing', 'menu.reports'].includes(p.name)
         ).map(p => p.id)
       };
 
@@ -116,7 +136,6 @@ class RoleModel {
           }
         }
       }
-      logger.success('ROLES', 'Seeded permissions and RBAC role assignments successfully.');
     } catch (err) {
       logger.warn('ROLES', `Permission seed notice: ${err.message}`);
     }
@@ -345,3 +364,4 @@ class RoleModel {
 }
 
 module.exports = RoleModel;
+

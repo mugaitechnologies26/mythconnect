@@ -9,6 +9,7 @@ import {
 import { BrandLogo } from './BrandLogo';
 import { BrandColors } from '../theme';
 import { useAppStore, ScreenType } from '../store/useAppStore';
+import { hasMenuAccess } from '../utils/rbac';
 
 interface NavItem {
   key: ScreenType;
@@ -25,6 +26,7 @@ export const AppSidebar: React.FC = () => {
     isSidebarCollapsed, 
     toggleSidebar, 
     currentUser, 
+    roles,
     logout,
     followups,
     conversations,
@@ -54,6 +56,8 @@ export const AppSidebar: React.FC = () => {
     { key: 'settings', label: 'Settings', icon: Sliders },
   ];
 
+  const visibleNavItems = navItems.filter(item => hasMenuAccess(item.key, currentUser, roles));
+
   return (
     <View style={[
       styles.sidebar, 
@@ -81,7 +85,7 @@ export const AppSidebar: React.FC = () => {
           {!isSidebarCollapsed && (
             <Text style={styles.groupTitle}>PLATFORM</Text>
           )}
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeScreen === item.key;
 
