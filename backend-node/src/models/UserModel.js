@@ -45,23 +45,6 @@ class UserModel {
     const rows = await db.query(sql, [email]);
     return rows[0] || null;
   }
-
-  static async getByRole(roleName) {
-    const sql = `
-      SELECT 
-        u.id, u.name, u.email, u.phone, u.avatar_url, u.is_active, u.last_login_at,
-        r.name AS role, r.display_name AS role_display,
-        t.name AS team_name
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN teams t ON u.team_id = t.id
-      WHERE (r.name = ? OR r.display_name = ?) AND u.deleted_at IS NULL
-      ORDER BY u.id ASC
-      LIMIT 1
-    `;
-    const rows = await db.query(sql, [roleName, roleName]);
-    return rows[0] || null;
-  }
 }
 
 module.exports = UserModel;
