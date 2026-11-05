@@ -72,7 +72,15 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'tablet'>('mobile');
 
   const sections: { key: SectionKey; label: string; icon: any; count?: number }[] = [
-    // 19 Action Items from Image 2
+    // 1. Starting directly with Basic Information in one continuous flow:
+    { key: 'basic', label: '1. Basic Information', icon: User },
+    { key: 'contact', label: '2. Contact & Location', icon: MapPin },
+    { key: 'hours', label: '3. Business Hours', icon: Clock },
+    { key: 'social', label: '4. Social Channels', icon: Share2, count: (profile.social_links || []).filter(s => s.enabled).length },
+    { key: 'services', label: '5. Services', icon: Layers, count: (profile.services || []).filter(s => s.enabled).length },
+    { key: 'shop', label: '6. Mini Shop / Products', icon: ShoppingBag, count: profile.product_ids?.length || 0 },
+
+    // Action Items in the same continuous single flow:
     { key: 'action_review', label: 'Review', icon: Star },
     { key: 'action_instagram', label: 'Instagram', icon: Instagram },
     { key: 'action_youtube', label: 'Youtube', icon: Youtube },
@@ -92,21 +100,6 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
     { key: 'action_wifi', label: 'Wi-Fi', icon: Wifi },
     { key: 'action_shop', label: 'Shop', icon: ShoppingBag, count: profile.product_ids?.length || 0 },
     { key: 'action_digital_profile', label: 'Digital Profile', icon: User },
-
-    // The following sections should come after that:
-    { key: 'basic', label: '1. Basic Information', icon: User },
-    { key: 'contact', label: '2. Contact & Location', icon: MapPin },
-    { key: 'hours', label: '3. Business Hours', icon: Clock },
-    { key: 'social', label: '4. Social Channels', icon: Share2, count: (profile.social_links || []).filter(s => s.enabled).length },
-    { key: 'services', label: '5. Services', icon: Layers, count: (profile.services || []).filter(s => s.enabled).length },
-    { key: 'shop', label: '6. Mini Shop / Products', icon: ShoppingBag, count: profile.product_ids?.length || 0 },
-
-    // Additional Sections
-    { key: 'catalogue', label: 'PDF Catalogues', icon: FileText, count: profile.catalogues?.length || 0 },
-    { key: 'portfolio', label: 'Portfolio Gallery', icon: Image, count: profile.portfolio?.length || 0 },
-    { key: 'testimonials', label: 'Testimonials', icon: Star, count: profile.testimonials?.length || 0 },
-    { key: 'achievements', label: 'Achievements', icon: Award, count: profile.achievements?.length || 0 },
-    { key: 'theme_seo', label: 'Theme & SEO Meta', icon: Palette },
   ];
 
   // Handlers for Basic info
@@ -2081,74 +2074,45 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
             {sections.map(sec => {
               const Icon = sec.icon;
               const isActive = activeSection === sec.key;
-              const isCoreStart = sec.key === 'basic';
-              const isExtraStart = sec.key === 'catalogue' && sec.label === 'PDF Catalogues';
 
               return (
-                <React.Fragment key={sec.key}>
-                  {isCoreStart && (
-                    <div style={{
-                      padding: '12px 10px 6px',
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: '#94A3B8',
-                      letterSpacing: 0.8,
-                      borderTop: '1px solid #F1F5F9',
-                      marginTop: 6
+                <button
+                  key={sec.key}
+                  onClick={() => setActiveSection(sec.key)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '9px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    backgroundColor: isActive ? '#EEF4FF' : 'transparent',
+                    color: isActive ? '#1565E8' : '#334155',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    marginBottom: 3,
+                    textAlign: 'left'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Icon size={16} color={isActive ? '#1565E8' : '#64748B'} />
+                    <span>{sec.label}</span>
+                  </div>
+                  {sec.count !== undefined && (
+                    <span style={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      backgroundColor: isActive ? '#1565E8' : '#F1F5F9',
+                      color: isActive ? '#FFFFFF' : '#64748B',
+                      padding: '2px 6px',
+                      borderRadius: 10
                     }}>
-                      CORE SECTIONS
-                    </div>
+                      {sec.count}
+                    </span>
                   )}
-                  {isExtraStart && (
-                    <div style={{
-                      padding: '12px 10px 6px',
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: '#94A3B8',
-                      letterSpacing: 0.8,
-                      borderTop: '1px solid #F1F5F9',
-                      marginTop: 6
-                    }}>
-                      ADDITIONAL SECTIONS
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setActiveSection(sec.key)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '9px 12px',
-                      borderRadius: 8,
-                      border: 'none',
-                      backgroundColor: isActive ? '#EEF4FF' : 'transparent',
-                      color: isActive ? '#1565E8' : '#334155',
-                      fontWeight: isActive ? 700 : 500,
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      marginBottom: 3,
-                      textAlign: 'left'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Icon size={16} color={isActive ? '#1565E8' : '#64748B'} />
-                      <span>{sec.label}</span>
-                    </div>
-                    {sec.count !== undefined && (
-                      <span style={{
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        backgroundColor: isActive ? '#1565E8' : '#F1F5F9',
-                        color: isActive ? '#FFFFFF' : '#64748B',
-                        padding: '2px 6px',
-                        borderRadius: 10
-                      }}>
-                        {sec.count}
-                      </span>
-                    )}
-                  </button>
-                </React.Fragment>
+                </button>
               );
             })}
           </div>
