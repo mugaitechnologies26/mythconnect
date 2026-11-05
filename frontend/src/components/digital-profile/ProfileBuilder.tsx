@@ -4,7 +4,9 @@ import {
   Sparkles, Plus, Trash2, Edit2, Check, ArrowUp, ArrowDown,
   Image, Layers, Star, Award, Shield, Wifi, ShoppingBag,
   Palette, Search, ExternalLink, QrCode, Eye, Smartphone,
-  Monitor, ChevronRight, CheckCircle, AlertTriangle
+  Monitor, ChevronRight, CheckCircle, AlertTriangle,
+  Instagram, Youtube, Facebook, Twitter, Linkedin, MessageCircle,
+  FileText, UserPlus, CreditCard, Play
 } from 'lucide-react';
 import { DigitalProfile, Product, ProfileTheme, SocialLink, ProfileService, ProfileCatalogue, ProfilePortfolioItem, ProfileTestimonial, ProfileAchievement, ProfileOffer, ProfileCustomLink } from '../../types';
 import { PublicProfilePage } from './PublicProfilePage';
@@ -20,12 +22,34 @@ interface ProfileBuilderProps {
 }
 
 type SectionKey = 
+  // 19 Quick Action Items from Image 2
+  | 'action_review'
+  | 'action_instagram'
+  | 'action_youtube'
+  | 'action_facebook'
+  | 'action_whatsapp'
+  | 'action_twitter'
+  | 'action_offers'
+  | 'action_linkedin'
+  | 'action_website'
+  | 'action_email'
+  | 'action_catalogue'
+  | 'action_map'
+  | 'action_call'
+  | 'action_save_contact'
+  | 'action_upi'
+  | 'action_play_store'
+  | 'action_wifi'
+  | 'action_shop'
+  | 'action_digital_profile'
+  // Core Sections (1 to 6)
   | 'basic' 
   | 'contact' 
   | 'hours' 
   | 'social' 
   | 'services' 
   | 'shop' 
+  // Additional Sections
   | 'catalogue' 
   | 'portfolio' 
   | 'testimonials' 
@@ -48,19 +72,40 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'tablet'>('mobile');
 
   const sections: { key: SectionKey; label: string; icon: any; count?: number }[] = [
-    { key: 'basic', label: 'Basic Information', icon: User },
-    { key: 'contact', label: 'Contact & Location', icon: MapPin },
-    { key: 'hours', label: 'Business Hours', icon: Clock },
-    { key: 'social', label: 'Social Channels', icon: Share2, count: profile.social_links.filter(s => s.enabled).length },
-    { key: 'services', label: 'Services', icon: Layers, count: profile.services.filter(s => s.enabled).length },
-    { key: 'shop', label: 'Mini Shop / Products', icon: ShoppingBag, count: profile.product_ids?.length || 0 },
-    { key: 'catalogue', label: 'PDF Catalogues', icon: Image, count: profile.catalogues?.length || 0 },
+    // 19 Action Items from Image 2
+    { key: 'action_review', label: 'Review', icon: Star },
+    { key: 'action_instagram', label: 'Instagram', icon: Instagram },
+    { key: 'action_youtube', label: 'Youtube', icon: Youtube },
+    { key: 'action_facebook', label: 'Facebook', icon: Facebook },
+    { key: 'action_whatsapp', label: 'Whatsapp', icon: MessageCircle },
+    { key: 'action_twitter', label: 'Twitter', icon: Twitter },
+    { key: 'action_offers', label: 'Offers', icon: Sparkles, count: profile.offers?.length || 0 },
+    { key: 'action_linkedin', label: 'Linked In', icon: Linkedin },
+    { key: 'action_website', label: 'Website', icon: Globe },
+    { key: 'action_email', label: 'Email', icon: Mail },
+    { key: 'action_catalogue', label: 'Catalogue', icon: FileText, count: profile.catalogues?.length || 0 },
+    { key: 'action_map', label: 'Map', icon: MapPin },
+    { key: 'action_call', label: 'Call', icon: Phone },
+    { key: 'action_save_contact', label: 'Save Contact', icon: UserPlus },
+    { key: 'action_upi', label: 'UPI', icon: CreditCard },
+    { key: 'action_play_store', label: 'Play Store', icon: Play },
+    { key: 'action_wifi', label: 'Wi-Fi', icon: Wifi },
+    { key: 'action_shop', label: 'Shop', icon: ShoppingBag, count: profile.product_ids?.length || 0 },
+    { key: 'action_digital_profile', label: 'Digital Profile', icon: User },
+
+    // The following sections should come after that:
+    { key: 'basic', label: '1. Basic Information', icon: User },
+    { key: 'contact', label: '2. Contact & Location', icon: MapPin },
+    { key: 'hours', label: '3. Business Hours', icon: Clock },
+    { key: 'social', label: '4. Social Channels', icon: Share2, count: (profile.social_links || []).filter(s => s.enabled).length },
+    { key: 'services', label: '5. Services', icon: Layers, count: (profile.services || []).filter(s => s.enabled).length },
+    { key: 'shop', label: '6. Mini Shop / Products', icon: ShoppingBag, count: profile.product_ids?.length || 0 },
+
+    // Additional Sections
+    { key: 'catalogue', label: 'PDF Catalogues', icon: FileText, count: profile.catalogues?.length || 0 },
     { key: 'portfolio', label: 'Portfolio Gallery', icon: Image, count: profile.portfolio?.length || 0 },
     { key: 'testimonials', label: 'Testimonials', icon: Star, count: profile.testimonials?.length || 0 },
     { key: 'achievements', label: 'Achievements', icon: Award, count: profile.achievements?.length || 0 },
-    { key: 'offers', label: 'Active Offers & Deals', icon: Sparkles, count: profile.offers?.length || 0 },
-    { key: 'upi_wifi', label: 'UPI & Guest Wi-Fi', icon: Wifi },
-    { key: 'apps_links', label: 'Apps & Custom Links', icon: Globe },
     { key: 'theme_seo', label: 'Theme & SEO Meta', icon: Palette },
   ];
 
@@ -78,6 +123,41 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
   const updateSocialUrl = (id: string, url: string) => {
     const updated = profile.social_links.map(s => s.id === id ? { ...s, url } : s);
     onUpdateProfile({ social_links: updated });
+  };
+
+  const getSocialLink = (platform: SocialLink['platform']): SocialLink => {
+    const found = (profile.social_links || []).find(s => s.platform === platform);
+    if (found) return found;
+    return {
+      id: `s_${platform}`,
+      platform,
+      url: '',
+      display_name: platform.charAt(0).toUpperCase() + platform.slice(1),
+      enabled: false,
+      display_order: 0
+    };
+  };
+
+  const updateSocialPlatform = (platform: SocialLink['platform'], url: string, enabled?: boolean) => {
+    const list = [...(profile.social_links || [])];
+    const index = list.findIndex(s => s.platform === platform);
+    if (index >= 0) {
+      list[index] = {
+        ...list[index],
+        url,
+        enabled: enabled !== undefined ? enabled : (url.trim().length > 0 ? true : list[index].enabled)
+      };
+    } else {
+      list.push({
+        id: `s_${platform}_${Date.now()}`,
+        platform,
+        url,
+        display_name: platform.charAt(0).toUpperCase() + platform.slice(1),
+        enabled: enabled !== undefined ? enabled : true,
+        display_order: list.length + 1
+      });
+    }
+    onUpdateProfile({ social_links: list });
   };
 
   // Handlers for Business Hours
@@ -599,6 +679,7 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
           </div>
         );
 
+      case 'action_shop':
       case 'shop':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -663,6 +744,7 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
           </div>
         );
 
+      case 'action_offers':
       case 'offers':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -741,6 +823,7 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
           </div>
         );
 
+      case 'action_catalogue':
       case 'catalogue':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -987,6 +1070,983 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
           </div>
         );
 
+      case 'action_review':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Star size={20} color="#F59E0B" fill="#F59E0B" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Google Review & Customer Feedback
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Direct satisfied customers and profile visitors to rate and review your business on Google. Tapping this on your profile opens your official Google review dialog directly.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Official Google Review Link *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://g.page/r/.../review or https://search.google.com/local/writereview?placeid=..."
+                  value={profile.google_review_url}
+                  onChange={(e) => handleTextChange('google_review_url', e.target.value)}
+                />
+              </div>
+
+              {profile.google_review_url && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <a
+                    href={profile.google_review_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Test Review Link
+                  </a>
+                </div>
+              )}
+
+              <div style={{ marginTop: 16, padding: 12, borderRadius: 8, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: 12, color: '#64748B' }}>
+                💡 <strong>Tip:</strong> You can find your short review link in Google Business Profile Manager &gt; "Ask for reviews".
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'action_instagram': {
+        const insta = getSocialLink('instagram');
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Instagram size={20} color="#E1306C" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Instagram Profile
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Connect your business or personal Instagram page to showcase visual work and build your brand followers.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Instagram Profile URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://www.instagram.com/yourhandle"
+                  value={insta.url}
+                  onChange={(e) => updateSocialPlatform('instagram', e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={insta.enabled}
+                    onChange={(e) => updateSocialPlatform('instagram', insta.url, e.target.checked)}
+                  />
+                  <span style={{ fontWeight: 600, color: insta.enabled ? '#00A86B' : '#94A3B8' }}>
+                    {insta.enabled ? 'Enabled on Profile' : 'Hidden from Profile'}
+                  </span>
+                </label>
+
+                {insta.url && (
+                  <a
+                    href={insta.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Test Instagram Link
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'action_youtube': {
+        const yt = getSocialLink('youtube');
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Youtube size={20} color="#FF0000" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  YouTube Channel & Videos
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Link your official YouTube channel or featured company video portfolio.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>YouTube Channel / Video URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://www.youtube.com/@yourchannel"
+                  value={yt.url}
+                  onChange={(e) => updateSocialPlatform('youtube', e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={yt.enabled}
+                    onChange={(e) => updateSocialPlatform('youtube', yt.url, e.target.checked)}
+                  />
+                  <span style={{ fontWeight: 600, color: yt.enabled ? '#00A86B' : '#94A3B8' }}>
+                    {yt.enabled ? 'Enabled on Profile' : 'Hidden from Profile'}
+                  </span>
+                </label>
+
+                {yt.url && (
+                  <a
+                    href={yt.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Test YouTube Link
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'action_facebook': {
+        const fb = getSocialLink('facebook');
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Facebook size={20} color="#1877F2" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Facebook Page / Profile
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Connect your official Facebook page for updates, reviews, and community engagement.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Facebook Page URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://www.facebook.com/yourpage"
+                  value={fb.url}
+                  onChange={(e) => updateSocialPlatform('facebook', e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={fb.enabled}
+                    onChange={(e) => updateSocialPlatform('facebook', fb.url, e.target.checked)}
+                  />
+                  <span style={{ fontWeight: 600, color: fb.enabled ? '#00A86B' : '#94A3B8' }}>
+                    {fb.enabled ? 'Enabled on Profile' : 'Hidden from Profile'}
+                  </span>
+                </label>
+
+                {fb.url && (
+                  <a
+                    href={fb.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Test Facebook Link
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'action_whatsapp':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <MessageCircle size={20} color="#25D366" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  WhatsApp Direct Chat
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Enable 1-tap WhatsApp chat on your digital profile. Tapping this opens an instant WhatsApp conversation with your business number.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>WhatsApp Phone Number (with Country Code) *</label>
+                <input
+                  type="text"
+                  style={styles.input}
+                  placeholder="+91 98765 43210"
+                  value={profile.whatsapp}
+                  onChange={(e) => handleTextChange('whatsapp', e.target.value)}
+                />
+              </div>
+
+              {profile.whatsapp && (
+                <a
+                  href={`https://wa.me/${profile.whatsapp.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#25D366',
+                    textDecoration: 'none',
+                    backgroundColor: '#E7F9EE',
+                    padding: '7px 12px',
+                    borderRadius: 8
+                  }}
+                >
+                  <ExternalLink size={14} /> Test WhatsApp Chat
+                </a>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_twitter': {
+        const tw = getSocialLink('twitter');
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Twitter size={20} color="#0F1419" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Twitter / X Profile
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Link your official Twitter / X account for news, company updates, and announcements.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Twitter / X Profile URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://x.com/yourhandle"
+                  value={tw.url}
+                  onChange={(e) => updateSocialPlatform('twitter', e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={tw.enabled}
+                    onChange={(e) => updateSocialPlatform('twitter', tw.url, e.target.checked)}
+                  />
+                  <span style={{ fontWeight: 600, color: tw.enabled ? '#00A86B' : '#94A3B8' }}>
+                    {tw.enabled ? 'Enabled on Profile' : 'Hidden from Profile'}
+                  </span>
+                </label>
+
+                {tw.url && (
+                  <a
+                    href={tw.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Test Twitter / X Link
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'action_linkedin': {
+        const li = getSocialLink('linkedin');
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Linkedin size={20} color="#0A66C2" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  LinkedIn Company / Executive Profile
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Establish B2B credibility by connecting your official company page or executive LinkedIn profile.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>LinkedIn Profile / Page URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://www.linkedin.com/company/yourbrand"
+                  value={li.url}
+                  onChange={(e) => updateSocialPlatform('linkedin', li.url)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={li.enabled}
+                    onChange={(e) => updateSocialPlatform('linkedin', li.url, e.target.checked)}
+                  />
+                  <span style={{ fontWeight: 600, color: li.enabled ? '#00A86B' : '#94A3B8' }}>
+                    {li.enabled ? 'Enabled on Profile' : 'Hidden from Profile'}
+                  </span>
+                </label>
+
+                {li.url && (
+                  <a
+                    href={li.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Test LinkedIn Link
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'action_website':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Globe size={20} color="#1565E8" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Official Business Website
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Direct visitors and enterprise leads directly to your main website or conversion landing page.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Website URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://www.mugaitechnologies.in"
+                  value={profile.website}
+                  onChange={(e) => handleTextChange('website', e.target.value)}
+                />
+              </div>
+
+              {profile.website && (
+                <a
+                  href={profile.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#1565E8',
+                    textDecoration: 'none',
+                    backgroundColor: '#EEF4FF',
+                    padding: '7px 12px',
+                    borderRadius: 8
+                  }}
+                >
+                  <ExternalLink size={14} /> Open Website
+                </a>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_email':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Mail size={20} color="#1565E8" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Official Email Address
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Allow visitors to compose and send emails to your official inbox with 1 tap.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Official Business Email *</label>
+                <input
+                  type="email"
+                  style={styles.input}
+                  placeholder="info@mugaitechnologies.in"
+                  value={profile.email}
+                  onChange={(e) => handleTextChange('email', e.target.value)}
+                />
+              </div>
+
+              {profile.email && (
+                <a
+                  href={`mailto:${profile.email}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#1565E8',
+                    textDecoration: 'none',
+                    backgroundColor: '#EEF4FF',
+                    padding: '7px 12px',
+                    borderRadius: 8
+                  }}
+                >
+                  <Mail size={14} /> Compose Email Test
+                </a>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_map':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <MapPin size={20} color="#EF1D2D" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Google Maps Location & Directions
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Let visiting clients navigate directly to your physical office, clinic, or showroom with 1 tap.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Google Maps Navigation Link *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://maps.google.com/?q=..."
+                  value={profile.google_maps_url}
+                  onChange={(e) => handleTextChange('google_maps_url', e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr', gap: 12, marginTop: 10 }}>
+                <div>
+                  <label style={styles.label}>Street Address</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="Building, street, landmark"
+                    value={profile.address}
+                    onChange={(e) => handleTextChange('address', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>City</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="Chennai"
+                    value={profile.city}
+                    onChange={(e) => handleTextChange('city', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Pincode</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="600001"
+                    value={profile.pincode}
+                    onChange={(e) => handleTextChange('pincode', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {profile.google_maps_url && (
+                <div style={{ marginTop: 14 }}>
+                  <a
+                    href={profile.google_maps_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#1565E8',
+                      textDecoration: 'none',
+                      backgroundColor: '#EEF4FF',
+                      padding: '7px 12px',
+                      borderRadius: 8
+                    }}
+                  >
+                    <ExternalLink size={14} /> Open in Google Maps
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_call':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Phone size={20} color="#1565E8" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Primary Phone Number (Call Action)
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                The official telephone number dialed when visitors tap the 'Call' action button on your digital card.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Official Contact Number *</label>
+                <input
+                  type="text"
+                  style={styles.input}
+                  placeholder="+91 98765 43210"
+                  value={profile.phone}
+                  onChange={(e) => handleTextChange('phone', e.target.value)}
+                />
+              </div>
+
+              {profile.phone && (
+                <a
+                  href={`tel:${profile.phone}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#1565E8',
+                    textDecoration: 'none',
+                    backgroundColor: '#EEF4FF',
+                    padding: '7px 12px',
+                    borderRadius: 8
+                  }}
+                >
+                  <Phone size={14} /> Dial Phone Test
+                </a>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_save_contact':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <UserPlus size={20} color="#00A86B" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Save Contact (vCard / Phonebook)
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                When visitors click 'Save Contact', an electronic business card (.vcf) is saved directly to their phonebook with all of the following details.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={styles.label}>Full Name *</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={profile.person_name}
+                    onChange={(e) => handleTextChange('person_name', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Designation / Job Title</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={profile.designation}
+                    onChange={(e) => handleTextChange('designation', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Business / Organization Name</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={profile.business_name}
+                    onChange={(e) => handleTextChange('business_name', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Mobile Phone Number *</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={profile.phone}
+                    onChange={(e) => handleTextChange('phone', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Email Address *</label>
+                  <input
+                    type="email"
+                    style={styles.input}
+                    value={profile.email}
+                    onChange={(e) => handleTextChange('email', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Website</label>
+                  <input
+                    type="url"
+                    style={styles.input}
+                    value={profile.website}
+                    onChange={(e) => handleTextChange('website', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'action_upi':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <CreditCard size={20} color="#1565E8" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  UPI Instant Payment & Settlement
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Accept direct settlements via Google Pay, PhonePe, Paytm, or BHIM directly from your digital profile and Smart QR.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={styles.label}>UPI ID / VPA *</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="merchant@okhdfcbank"
+                    value={profile.upi_id}
+                    onChange={(e) => handleTextChange('upi_id', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Payee / Registered Merchant Name</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="Mugai Technologies"
+                    value={profile.upi_name}
+                    onChange={(e) => handleTextChange('upi_name', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {profile.upi_id && (
+                <div style={{ marginTop: 14, padding: 12, borderRadius: 8, backgroundColor: '#EEF4FF', border: '1px solid #CBD5E1', fontSize: 12, color: '#0E4BB5' }}>
+                  ✓ UPI Intent Link: <code>upi://pay?pa={profile.upi_id}&pn={encodeURIComponent(profile.upi_name || profile.business_name)}&cu=INR</code>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_play_store':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Play size={20} color="#00A86B" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Google Play Store App Download
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Promote your Android mobile application directly to profile visitors.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Google Play Store App URL *</label>
+                <input
+                  type="url"
+                  style={styles.input}
+                  placeholder="https://play.google.com/store/apps/details?id=com.yourbrand.app"
+                  value={profile.play_store_url}
+                  onChange={(e) => handleTextChange('play_store_url', e.target.value)}
+                />
+              </div>
+
+              {profile.play_store_url && (
+                <a
+                  href={profile.play_store_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#00A86B',
+                    textDecoration: 'none',
+                    backgroundColor: '#E7F9EE',
+                    padding: '7px 12px',
+                    borderRadius: 8
+                  }}
+                >
+                  <ExternalLink size={14} /> Open in Google Play
+                </a>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'action_wifi':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Wifi size={20} color="#1565E8" />
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                    Guest Wi-Fi Quick Connect
+                  </h3>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={profile.wifi_enabled}
+                    onChange={(e) => handleTextChange('wifi_enabled', e.target.checked)}
+                  />
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: profile.wifi_enabled ? '#00A86B' : '#94A3B8' }}>
+                    {profile.wifi_enabled ? 'Displayed on Profile' : 'Hidden'}
+                  </span>
+                </label>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Share your office or storefront Wi-Fi credentials with guests via 1-tap QR scan connection.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={styles.label}>Network Name (SSID) *</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="Mugai_Guest_5G"
+                    value={profile.wifi_ssid}
+                    onChange={(e) => handleTextChange('wifi_ssid', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Network Password *</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="GuestSecurePass2026"
+                    value={profile.wifi_password}
+                    onChange={(e) => handleTextChange('wifi_password', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'action_digital_profile':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <User size={20} color="#1565E8" />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', margin: 0 }}>
+                  Digital Profile Identity & Public Handle
+                </h3>
+              </div>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                Your unique public URL slug and brand handle. Any visitor navigating to this address will access your live digital card.
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Public Profile URL Slug *</label>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{
+                    backgroundColor: '#F1F5F9',
+                    padding: '10px 12px',
+                    borderRadius: '8px 0 0 8px',
+                    border: '1px solid #CBD5E1',
+                    borderRight: 'none',
+                    fontSize: 13,
+                    color: '#64748B'
+                  }}>
+                    /p/
+                  </span>
+                  <input
+                    type="text"
+                    style={{ ...styles.input, borderRadius: '0 8px 8px 0', marginBottom: 0 }}
+                    value={profile.slug}
+                    onChange={(e) => handleTextChange('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={styles.label}>Business / Organization Name</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={profile.business_name}
+                    onChange={(e) => handleTextChange('business_name', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Primary Contact Person</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={profile.person_name}
+                    onChange={(e) => handleTextChange('person_name', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={styles.label}>Short Tagline / Catchphrase</label>
+                <input
+                  type="text"
+                  style={styles.input}
+                  value={profile.short_description}
+                  onChange={(e) => handleTextChange('short_description', e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <a
+                  href={`/p/${profile.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#1565E8',
+                    textDecoration: 'none',
+                    backgroundColor: '#EEF4FF',
+                    padding: '7px 12px',
+                    borderRadius: 8
+                  }}
+                >
+                  <ExternalLink size={14} /> View Live Public Profile (/p/{profile.slug})
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div style={{ padding: 20, textAlign: 'center', color: '#64748B' }}>
@@ -1021,44 +2081,74 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
             {sections.map(sec => {
               const Icon = sec.icon;
               const isActive = activeSection === sec.key;
+              const isCoreStart = sec.key === 'basic';
+              const isExtraStart = sec.key === 'catalogue' && sec.label === 'PDF Catalogues';
+
               return (
-                <button
-                  key={sec.key}
-                  onClick={() => setActiveSection(sec.key)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '9px 12px',
-                    borderRadius: 8,
-                    border: 'none',
-                    backgroundColor: isActive ? '#EEF4FF' : 'transparent',
-                    color: isActive ? '#1565E8' : '#334155',
-                    fontWeight: isActive ? 700 : 500,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    marginBottom: 3,
-                    textAlign: 'left'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Icon size={16} color={isActive ? '#1565E8' : '#64748B'} />
-                    <span>{sec.label}</span>
-                  </div>
-                  {sec.count !== undefined && (
-                    <span style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      backgroundColor: isActive ? '#1565E8' : '#F1F5F9',
-                      color: isActive ? '#FFFFFF' : '#64748B',
-                      padding: '2px 6px',
-                      borderRadius: 10
+                <React.Fragment key={sec.key}>
+                  {isCoreStart && (
+                    <div style={{
+                      padding: '12px 10px 6px',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: '#94A3B8',
+                      letterSpacing: 0.8,
+                      borderTop: '1px solid #F1F5F9',
+                      marginTop: 6
                     }}>
-                      {sec.count}
-                    </span>
+                      CORE SECTIONS
+                    </div>
                   )}
-                </button>
+                  {isExtraStart && (
+                    <div style={{
+                      padding: '12px 10px 6px',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: '#94A3B8',
+                      letterSpacing: 0.8,
+                      borderTop: '1px solid #F1F5F9',
+                      marginTop: 6
+                    }}>
+                      ADDITIONAL SECTIONS
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setActiveSection(sec.key)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '9px 12px',
+                      borderRadius: 8,
+                      border: 'none',
+                      backgroundColor: isActive ? '#EEF4FF' : 'transparent',
+                      color: isActive ? '#1565E8' : '#334155',
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      marginBottom: 3,
+                      textAlign: 'left'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Icon size={16} color={isActive ? '#1565E8' : '#64748B'} />
+                      <span>{sec.label}</span>
+                    </div>
+                    {sec.count !== undefined && (
+                      <span style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        backgroundColor: isActive ? '#1565E8' : '#F1F5F9',
+                        color: isActive ? '#FFFFFF' : '#64748B',
+                        padding: '2px 6px',
+                        borderRadius: 10
+                      }}>
+                        {sec.count}
+                      </span>
+                    )}
+                  </button>
+                </React.Fragment>
               );
             })}
           </div>
