@@ -39,6 +39,9 @@ interface AppState {
   login: (email: string, role?: string) => Promise<void>;
   logout: () => void;
   switchUserRole: (role: User['role']) => Promise<void>;
+  addUser: (data: Omit<User, 'id'> & { password?: string; role_id?: number; team_id?: number }) => Promise<User>;
+  updateUser: (id: number, patch: Partial<User> & { password?: string; role_id?: number; team_id?: number }) => Promise<void>;
+  deleteUser: (id: number) => Promise<void>;
 
   // Navigation State
   activeScreen: ScreenType;
@@ -995,5 +998,70 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(state => ({
       roles: state.roles.filter(r => r.id !== id)
     }));
+  },
+
+  addUser: async (userData) => {
+    const tempId = Date.now();
+    const newUser: User = {
+      id: tempId,
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone || '',
+      role: userData.role || 'sales_executive',
+      role_display: userData.role_display || userData.role || 'Sales Executive',
+      role_id: userData.role_id,
+      team_id: userData.team_id,
+      team_name: userData.team_name || 'Enterprise Sales Team',
+      avatar_url: userData.avatar_url || `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500000)}?w=150`,
+      is_active: userData.is_active !== undefined ? userData.is_active : true,
+    };
+
+    set(state => ({
+      users: [...state.users, newUser]
+    }));
+
+    try {
+      const saved = await authApi.createUser(userData);
+      if (saved && saved.id) {
+        set(state => ({
+          users: state.users.map(u => u.id === tempId ? saved : u)
+        }));
+        return saved;
+      }
+    } catch (e) {
+      console.warn('Failed to save team member to backend, retained in store:', e);
+    }
+    return newUser;
+  },
+
+  updateUser: async (id, patch) => {
+    set(state => ({
+      users: state.users.map(u => u.id === id ? { ...u, ...patch } : u),
+      currentUser: state.currentUser && state.currentUser.id === id ? { ...state.currentUser, ...patch } : state.currentUser
+    }));
+
+    try {
+      const saved = await authApi.updateUser(id, patch);
+      if (saved && saved.id) {
+        set(state => ({
+          users: state.users.map(u => u.id === id ? saved : u),
+          currentUser: state.currentUser && state.currentUser.id === id ? saved : state.currentUser
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed to update team member in backend:', e);
+    }
+  },
+
+  deleteUser: async (id) => {
+    set(state => ({
+      users: state.users.filter(u => u.id !== id)
+    }));
+
+    try {
+      await authApi.deleteUser(id);
+    } catch (e) {
+      console.warn('Failed to delete team member in backend:', e);
+    }
   }
 }));

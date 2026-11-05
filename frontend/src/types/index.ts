@@ -33,6 +33,8 @@ export interface User {
   phone: string;
   role: RoleType;
   role_display: string;
+  role_id?: number;
+  team_id?: number;
   avatar_url?: string;
   team_name?: string;
   is_active: boolean;

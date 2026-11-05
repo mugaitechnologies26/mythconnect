@@ -70,6 +70,10 @@ export const authApi = {
   login: (data: { email: string }) => apiClient.post('/auth/login', data).then(r => r.data),
   getCurrentUser: () => apiClient.get('/auth/user').then(r => r.data.user),
   getUsers: () => apiClient.get('/auth/users').then(r => r.data.users),
+  createUser: (data: any) => apiClient.post('/auth/users', data).then(r => r.data.user),
+  updateUser: (id: number, data: any) => apiClient.put(`/auth/users/${id}`, data).then(r => r.data.user),
+  deleteUser: (id: number) => apiClient.delete(`/auth/users/${id}`).then(r => r.data),
+  getTeams: () => apiClient.get('/auth/teams').then(r => r.data.teams),
   switchRole: (role: string) => apiClient.post('/auth/switch-role', { role }).then(r => r.data.user),
 };
 
