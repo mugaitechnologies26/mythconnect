@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Menu, Search, Bell, Sparkles, CheckCircle2, ChevronDown, Check } from 'lucide-react';
+import { Menu, Search, Bell, Sparkles, CheckCircle2, ChevronDown, Check, LogOut, User as UserIcon } from 'lucide-react';
 import { BrandColors } from '../theme';
 import { useAppStore } from '../store/useAppStore';
 import { BrandLogo } from './BrandLogo';
@@ -15,7 +15,8 @@ export const AppHeader: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
     markAllNotificationsRead, 
     setSearchOpen,
     setMetaSimModalOpen,
-    setMobileDrawerOpen
+    setMobileDrawerOpen,
+    logout
   } = useAppStore();
 
   const [isNotifOpen, setNotifOpen] = useState(false);
@@ -177,9 +178,34 @@ export const AppHeader: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
                   )}
                 </TouchableOpacity>
               ))}
+
+              <View style={styles.dropdownDivider} />
+
+              <TouchableOpacity
+                style={styles.dropdownLogoutBtn}
+                onPress={() => {
+                  setRoleMenuOpen(false);
+                  logout();
+                }}
+              >
+                <LogOut size={14} color={BrandColors.red} />
+                <Text style={styles.dropdownLogoutText}>Log Out</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
+
+        {/* User Avatar with direct logout on click */}
+        <TouchableOpacity 
+          style={styles.headerAvatar}
+          onPress={logout}
+          activeOpacity={0.7}
+          title="Click to Log Out"
+        >
+          <Text style={styles.headerAvatarText}>
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -429,5 +455,38 @@ const styles = StyleSheet.create({
   roleOptionActive: {
     fontWeight: '700',
     color: BrandColors.blue,
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: BrandColors.borderLight,
+    marginVertical: 4,
+  },
+  dropdownLogoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  dropdownLogoutText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: BrandColors.red,
+  },
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BrandColors.darkNavy,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  headerAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

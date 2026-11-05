@@ -36,7 +36,7 @@ interface AppState {
   currentUser: User | null;
   users: User[];
   isAuthenticated: boolean;
-  login: (email: string, role?: string) => Promise<void>;
+  login: (email?: string, role?: string, password?: string) => Promise<boolean>;
   logout: () => void;
   switchUserRole: (role: User['role']) => Promise<void>;
 
@@ -194,30 +194,102 @@ const emptyDigitalProfile: DigitalProfile = {
   updated_at: new Date().toISOString()
 };
 
-export const useAppStore = create<AppState>((set, get) => ({
-  currentUser: null,
-  users: [],
-  isAuthenticated: true,
-
-  login: async (email: string, role?: string) => {
+const getStoredAuth = (): { isAuthenticated: boolean; user: User | null } => {
+  if (typeof window !== 'undefined') {
     try {
-      const res = await authApi.login({ email });
+      const stored = localStorage.getItem('mythconnect_auth');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.isAuthenticated && parsed.user) {
+          return { isAuthenticated: true, user: parsed.user };
+        }
+      }
+    } catch (e) {}
+  }
+  return { isAuthenticated: false, user: null };
+};
+
+const initialAuth = getStoredAuth();
+
+export const useAppStore = create<AppState>((set, get) => ({
+  currentUser: initialAuth.user,
+  users: [],
+  isAuthenticated: initialAuth.isAuthenticated,
+
+  login: async (email?: string, role?: string, password?: string): Promise<boolean> => {
+    try {
+      const res = await authApi.login({ email, role, password });
       if (res && res.user) {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('mythconnect_auth', JSON.stringify({ isAuthenticated: true, user: res.user }));
+          } catch (e) {}
+        }
         set({ currentUser: res.user, isAuthenticated: true });
-        return;
+        
+        // Ensure activeScreen is allowed for the logged in role
+        const currentScreen = get().activeScreen;
+        if (!hasMenuAccess(currentScreen, res.user, get().roles)) {
+          set({ activeScreen: 'dashboard' });
+        }
+        return true;
       }
     } catch (e) {
       console.warn('API login notice:', e);
     }
+
+    // In-memory fallback
     const currentUsers = get().users;
-    const matched = currentUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (matched) {
-      set({ currentUser: matched, isAuthenticated: true });
+    let matched: User | null = null;
+    if (email) {
+      matched = currentUsers.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
     }
+    if (!matched && role) {
+      matched = currentUsers.find(u => u.role === role) || null;
+      if (!matched) {
+        const roleObj = get().roles.find(r => r.name === role);
+        if (roleObj) {
+          matched = {
+            id: 1000 + roleObj.id,
+            name: `${roleObj.display_name} User`,
+            email: `${roleObj.name}@mythconnect.ai`,
+            phone: '+919876543210',
+            role: roleObj.name as any,
+            role_display: roleObj.display_name,
+            team_name: 'Operations Team',
+            avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            is_active: true
+          };
+        }
+      }
+    }
+    if (!matched && currentUsers.length > 0) {
+      matched = currentUsers[0];
+    }
+
+    if (matched) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mythconnect_auth', JSON.stringify({ isAuthenticated: true, user: matched }));
+        } catch (e) {}
+      }
+      set({ currentUser: matched, isAuthenticated: true });
+      if (!hasMenuAccess(get().activeScreen, matched, get().roles)) {
+        set({ activeScreen: 'dashboard' });
+      }
+      return true;
+    }
+    return false;
   },
 
   logout: () => {
-    set({ currentUser: null, isAuthenticated: false });
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('mythconnect_auth');
+      } catch (e) {}
+    }
+    authApi.logout().catch(() => {});
+    set({ currentUser: null, isAuthenticated: false, activeScreen: 'dashboard' });
   },
 
   switchUserRole: async (role: User['role']) => {
@@ -248,6 +320,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     if (nextUser) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mythconnect_auth', JSON.stringify({ isAuthenticated: true, user: nextUser }));
+        } catch (e) {}
+      }
       set({ currentUser: nextUser });
       // Ensure the active screen is accessible in the newly selected role
       const currentScreen = get().activeScreen;
@@ -361,7 +438,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         digitalProfile: digitalProfile ? { ...state.digitalProfile, ...digitalProfile } : state.digitalProfile,
         products: Array.isArray(products) ? products : [],
         users: Array.isArray(users) ? users : [],
-        currentUser: currentUser || (Array.isArray(users) && users.length > 0 ? users[0] : state.currentUser),
+        currentUser: state.currentUser 
+          ? state.currentUser 
+          : (state.isAuthenticated ? (currentUser || (Array.isArray(users) && users.length > 0 ? users[0] : null)) : null),
         notifications: Array.isArray(notifications) ? notifications : [],
         settings: settings || {},
         roles: Array.isArray(roles) ? roles : [],

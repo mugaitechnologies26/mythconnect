@@ -212,6 +212,19 @@ class RoleModel {
   }
 
   /**
+   * Get a single role by name or display_name
+   */
+  static async getByName(name) {
+    if (!name) return null;
+    const roles = await db.query(
+      `SELECT id FROM roles WHERE name = ? OR display_name = ? LIMIT 1`,
+      [name, name]
+    );
+    if (!roles || roles.length === 0) return null;
+    return this.getById(roles[0].id);
+  }
+
+  /**
    * Get all permissions grouped by category
    */
   static async getPermissions() {

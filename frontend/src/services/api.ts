@@ -67,10 +67,11 @@ export const followupsApi = {
 };
 
 export const authApi = {
-  login: (data: { email: string }) => apiClient.post('/auth/login', data).then(r => r.data),
+  login: (data: { email?: string; role?: string; password?: string }) => apiClient.post('/auth/login', data).then(r => r.data),
   getCurrentUser: () => apiClient.get('/auth/user').then(r => r.data.user),
   getUsers: () => apiClient.get('/auth/users').then(r => r.data.users),
   switchRole: (role: string) => apiClient.post('/auth/switch-role', { role }).then(r => r.data.user),
+  logout: () => apiClient.post('/auth/logout').then(r => r.data),
 };
 
 export const rolesApi = {
