@@ -92,6 +92,9 @@ class DigitalProfileModel {
     profile.social_links = await db.query('SELECT id, platform, url, display_name, is_active AS enabled, display_order FROM digital_profile_social_links WHERE profile_id = ? ORDER BY display_order ASC', [profile.id]);
     profile.services = await db.query('SELECT id, title, description, starting_price, icon_name, cta_text, is_active AS enabled FROM digital_profile_services WHERE profile_id = ? ORDER BY display_order ASC', [profile.id]);
     profile.catalogues = await db.query('SELECT id, title, description, file_url, cover_image, file_size, is_active AS enabled FROM digital_profile_catalogues WHERE profile_id = ?', [profile.id]);
+    profile.offers = await db.query('SELECT id, title, description, image_url, original_price, offer_price, valid_until, cta_text, is_active AS enabled FROM digital_profile_offers WHERE profile_id = ?', [profile.id]);
+    const prodRows = await db.query('SELECT product_id FROM digital_profile_products WHERE profile_id = ? ORDER BY display_order ASC', [profile.id]);
+    profile.product_ids = (prodRows || []).map(r => Number(r.product_id));
 
     return profile;
   }
@@ -102,6 +105,8 @@ class DigitalProfileModel {
       'business_name', 'person_name', 'designation', 'business_category',
       'short_description', 'about', 'phone', 'whatsapp', 'email', 'website',
       'address', 'city', 'state', 'pincode', 'google_maps_url', 'google_review_url',
+      'upi_id', 'upi_name', 'wifi_enabled', 'wifi_ssid', 'wifi_password', 'wifi_security',
+      'play_store_url', 'app_store_url',
       'status', 'theme', 'primary_color', 'secondary_color', 'views_count',
       'unique_visitors', 'qr_scans_count', 'enquiries_count'
     ];
@@ -119,6 +124,16 @@ class DigitalProfileModel {
     if (updates.length > 0) {
       values.push(id || 1);
       await db.query(`UPDATE digital_profiles SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values);
+    }
+
+    if (Array.isArray(patch.product_ids)) {
+      await db.query('DELETE FROM digital_profile_products WHERE profile_id = ?', [id || 1]);
+      for (let i = 0; i < patch.product_ids.length; i++) {
+        await db.query(
+          'INSERT INTO digital_profile_products (profile_id, product_id, display_order) VALUES (?, ?, ?)',
+          [id || 1, patch.product_ids[i], i + 1]
+        );
+      }
     }
 
     return this.getProfile();

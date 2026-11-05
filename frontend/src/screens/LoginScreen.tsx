@@ -13,13 +13,11 @@ export const LoginScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => {
 
   const handleLogin = () => {
     login(email);
-    showSnackbar(`Welcome back to Myth Connect.ai!`, 'success');
   };
 
   const handleQuickRole = (roleEmail: string, roleName: string) => {
     setEmail(roleEmail);
     login(roleEmail);
-    showSnackbar(`Logged in as ${roleName}`, 'success');
   };
 
   return (

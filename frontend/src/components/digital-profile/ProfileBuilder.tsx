@@ -11,6 +11,7 @@ import {
 import { DigitalProfile, Product, ProfileTheme, SocialLink, ProfileService, ProfileCatalogue, ProfilePortfolioItem, ProfileTestimonial, ProfileAchievement, ProfileOffer, ProfileCustomLink } from '../../types';
 import { PublicProfilePage } from './PublicProfilePage';
 import { BrandColors } from '../../theme';
+import { useAppStore } from '../../store/useAppStore';
 
 interface ProfileBuilderProps {
   profile: DigitalProfile;
@@ -67,6 +68,7 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
   onPublish,
   isMobile
 }) => {
+  const { trackProfileEvent, submitProfileEnquiry } = useAppStore();
   const [activeSection, setActiveSection] = useState<SectionKey>('basic');
   const [mobilePreviewModal, setMobilePreviewModal] = useState<boolean>(false);
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'tablet'>('mobile');
@@ -2316,6 +2318,8 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
                 profile={profile}
                 products={products}
                 isPreview={true}
+                onTrackEvent={trackProfileEvent}
+                onSubmitEnquiry={submitProfileEnquiry}
               />
             </div>
           </div>
@@ -2366,6 +2370,8 @@ export const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
               profile={profile}
               products={products}
               isPreview={true}
+              onTrackEvent={trackProfileEvent}
+              onSubmitEnquiry={submitProfileEnquiry}
             />
           </div>
         </div>

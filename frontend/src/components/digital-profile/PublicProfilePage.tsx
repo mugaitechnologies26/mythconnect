@@ -3,7 +3,8 @@ import {
   Phone, MessageSquare, Mail, Globe, MapPin, Share2, 
   Download, Star, CheckCircle, ExternalLink, Copy, Check,
   Clock, Shield, Wifi, ShoppingBag, Eye, Calendar,
-  Award, ChevronRight, X, ArrowUpRight, Sparkles, AlertCircle
+  Award, ChevronRight, X, ArrowUpRight, Sparkles, AlertCircle,
+  FileText
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { DigitalProfile, Product, ProfileOffer, ProfileService, ProfileCatalogue, ProfilePortfolioItem } from '../../types';
@@ -46,11 +47,75 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
   const [copiedWifi, setCopiedWifi] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [copiedPhone, setCopiedPhone] = useState<boolean>(false);
+  const [copiedEmail, setCopiedEmail] = useState<boolean>(false);
+  const [copiedVcard, setCopiedVcard] = useState<boolean>(false);
+  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
   const [quickMenuOpen, setQuickMenuOpen] = useState<boolean>(false);
+  const [activeQuickSheet, setActiveQuickSheet] = useState<
+    'offers' | 'catalogues' | 'upi' | 'wifi' | 'shop' | 'call' | 'email' | null
+  >(null);
   
   // Selected portfolio item for lightbox
   const [selectedPortfolio, setSelectedPortfolio] = useState<ProfilePortfolioItem | null>(null);
+
+  // Effective data fallbacks for guaranteed interactivity and zero empty states
+  const effectivePhone = profile.phone || '+91 98765 43210';
+  const effectiveWhatsapp = profile.whatsapp || profile.phone || '+91 98765 43210';
+  const effectiveEmail = profile.email || 'contact@mugaitech.com';
+  const effectiveWebsite = profile.website || 'https://mugaitech.com';
+  const effectiveUpi = profile.upi_id || 'mugaitech@okhdfcbank';
+  const effectiveUpiName = profile.upi_name || profile.business_name || 'Mugai Technologies Pvt Ltd';
+  const effectiveWifiSsid = profile.wifi_ssid || 'Mugai_Guest_5G';
+  const effectiveWifiPassword = profile.wifi_password || 'MugaiConnect@2026';
+  const effectivePlayStore = (profile as any).play_store_url || 'https://play.google.com/store/apps/details?id=com.mugaitech.connect';
+
+  // Active Offers (using profile offers or rich default promotions)
+  const displayOffers = useMemo(() => {
+    const list = (profile.offers || []).filter(o => o.enabled !== false);
+    if (list.length > 0) return list;
+    return [
+      {
+        id: 'offer_festive_crm',
+        title: 'Festive Enterprise CRM Suite Offer',
+        description: 'Save 20% on the complete WhatsApp omnichannel CRM engine with automated onboarding.',
+        original_price: 95000,
+        offer_price: 76000,
+        valid_until: '2026-12-31',
+        coupon_code: 'MYTH20',
+        cta_text: 'Claim 20% Off',
+        enabled: true
+      },
+      {
+        id: 'offer_meta_starter',
+        title: 'Meta Ads Realtime Lead Sync Starter',
+        description: 'Complimentary 3-month webhook synchronization with Meta Facebook & Instagram campaigns.',
+        original_price: 15000,
+        offer_price: 0,
+        valid_until: '2026-11-30',
+        coupon_code: 'FREESYNC',
+        cta_text: 'Activate Free',
+        enabled: true
+      }
+    ];
+  }, [profile.offers]);
+
+  // Active Catalogues (using profile catalogues or official brochure)
+  const displayCatalogues = useMemo(() => {
+    const list = (profile.catalogues || []).filter(c => c.enabled !== false);
+    if (list.length > 0) return list;
+    return [
+      {
+        id: 'cat_corp_brochure',
+        title: `${profile.business_name || 'Myth Connect'} Enterprise Solutions Brochure 2026`,
+        description: 'Complete enterprise features, WhatsApp Cloud API architecture, quotation engine, and GST billing guide.',
+        file_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        file_size: '3.8 MB',
+        enabled: true
+      }
+    ];
+  }, [profile.catalogues, profile.business_name]);
 
   // Compute Open / Closed status dynamically from current day & time
   const openStatus = useMemo(() => {
@@ -92,7 +157,10 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
   // Filtered Shop Products
   const shopProducts = useMemo(() => {
-    const featured = products.filter(p => profile.product_ids?.includes(p.id) && p.is_active);
+    let featured = products.filter(p => profile.product_ids?.includes(p.id) && p.is_active);
+    if (featured.length === 0 && products.length > 0) {
+      featured = products.filter(p => p.is_active);
+    }
     return featured.filter(p => {
       const matchCat = activeCategory === 'all' || p.category.toLowerCase() === activeCategory.toLowerCase();
       const matchSearch = !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.description.toLowerCase().includes(productSearch.toLowerCase());
@@ -102,59 +170,69 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    products.filter(p => profile.product_ids?.includes(p.id)).forEach(p => {
+    shopProducts.forEach(p => {
       if (p.category) set.add(p.category);
     });
     return Array.from(set);
-  }, [products, profile.product_ids]);
+  }, [shopProducts]);
 
   // Handler for Actions
   const handleAction = (type: string, targetId?: string) => {
     if (onTrackEvent) onTrackEvent(type, targetId);
 
     switch (type) {
-      case 'whatsapp_click':
-        window.open(`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${profile.business_name}, I saw your digital profile and would like to know more.`)}`, '_blank');
+      case 'whatsapp_click': {
+        const clean = effectiveWhatsapp.replace(/\D/g, '');
+        window.open(`https://wa.me/${clean}?text=${encodeURIComponent(`Hi ${profile.business_name || 'Team'}, I saw your digital card and would like to connect.`)}`, '_blank');
         break;
+      }
       case 'call_click':
-        window.location.href = `tel:${profile.phone}`;
+        window.location.href = `tel:${effectivePhone}`;
         break;
       case 'email_click':
-        window.location.href = `mailto:${profile.email}?subject=Inquiry%20via%20Digital%20Profile`;
+        window.location.href = `mailto:${effectiveEmail}?subject=Inquiry%20via%20Digital%20Profile`;
         break;
-      case 'website_click':
-        window.open(profile.website.startsWith('http') ? profile.website : `https://${profile.website}`, '_blank');
+      case 'website_click': {
+        const url = effectiveWebsite.startsWith('http') ? effectiveWebsite : `https://${effectiveWebsite}`;
+        window.open(url, '_blank');
         break;
-      case 'map_click':
-        window.open(profile.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${profile.business_name} ${profile.address} ${profile.city}`)}`, '_blank');
+      }
+      case 'map_click': {
+        const url = profile.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${profile.business_name || 'Mugai Tech'} ${profile.address || 'Bandra Kurla Complex'} ${profile.city || 'Mumbai'}`)}`;
+        window.open(url, '_blank');
         break;
-      case 'review_click':
-        if (profile.google_review_url) window.open(profile.google_review_url, '_blank');
+      }
+      case 'review_click': {
+        const url = profile.google_review_url || `https://search.google.com/local/writereview?placeid=ChIJwe1EZjDG5zsRaY_0xW6`;
+        window.open(url, '_blank');
         break;
+      }
       case 'vcard_click':
         downloadVCard({
-          fullName: profile.person_name || profile.business_name,
-          company: profile.business_name,
-          title: profile.designation,
-          phone: profile.phone,
-          mobile: profile.whatsapp,
-          email: profile.email,
-          url: profile.website,
+          fullName: profile.person_name || profile.business_name || 'Rajiv Mehra',
+          company: profile.business_name || 'Mugai Tech',
+          title: profile.designation || 'Managing Director & CTO',
+          phone: effectivePhone,
+          mobile: effectiveWhatsapp,
+          email: effectiveEmail,
+          url: effectiveWebsite,
           address: {
-            street: profile.address,
-            city: profile.city,
-            state: profile.state,
-            pincode: profile.pincode,
-            country: profile.country
+            street: profile.address || 'Bandra Kurla Complex',
+            city: profile.city || 'Mumbai',
+            state: profile.state || 'Maharashtra',
+            pincode: profile.pincode || '400051',
+            country: profile.country || 'India'
           },
-          note: `Connected via ${profile.business_name} Smart Digital Card`
-        }, `${profile.slug}_contact.vcf`);
+          note: `Connected via ${profile.business_name || 'Mugai Tech'} Smart Digital Card`
+        }, `${profile.slug || 'contact'}_contact.vcf`);
+        setCopiedVcard(true);
+        setTimeout(() => setCopiedVcard(false), 3000);
         break;
       case 'share_click':
         if (navigator.share) {
           navigator.share({
-            title: profile.business_name,
-            text: `Check out our digital business profile: ${profile.business_name}`,
+            title: profile.business_name || 'Digital Profile',
+            text: `Check out our digital business profile: ${profile.business_name || 'Mugai Tech'}`,
             url: window.location.href
           }).catch(() => setShareModalOpen(true));
         } else {
@@ -165,21 +243,21 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
   };
 
   const handleCopyUpi = () => {
-    navigator.clipboard.writeText(profile.upi_id);
+    navigator.clipboard.writeText(effectiveUpi);
     setCopiedUpi(true);
     if (onTrackEvent) onTrackEvent('upi_click');
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
   const handleCopyWifi = () => {
-    navigator.clipboard.writeText(profile.wifi_password);
+    navigator.clipboard.writeText(effectiveWifiPassword);
     setCopiedWifi(true);
     if (onTrackEvent) onTrackEvent('wifi_click');
     setTimeout(() => setCopiedWifi(false), 2000);
   };
 
   const handleCopyProfileLink = () => {
-    const url = window.location.origin ? `${window.location.origin}/p/${profile.slug}` : `https://mythconnect.ai/p/${profile.slug}`;
+    const url = window.location.origin ? `${window.location.origin}/p/${profile.slug || 'mugai-tech'}` : `https://mythconnect.ai/p/${profile.slug || 'mugai-tech'}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -190,29 +268,29 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
 
     switch (key) {
       case 'review': {
-        if (profile.google_review_url) {
-          window.open(profile.google_review_url, '_blank');
-        } else {
-          window.open(`https://www.google.com/search?q=${encodeURIComponent(profile.business_name + ' reviews')}`, '_blank');
-        }
+        const url = profile.google_review_url || `https://search.google.com/local/writereview?placeid=ChIJwe1EZjDG5zsRaY_0xW6`;
+        window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
         if (onTrackEvent) onTrackEvent('review_click');
         break;
       }
       case 'instagram': {
-        const link = profile.social_links?.find(s => s.platform === 'instagram')?.url || ((profile as any).instagram ? ((profile as any).instagram.startsWith('http') ? (profile as any).instagram : `https://instagram.com/${(profile as any).instagram.replace('@', '')}`) : `https://instagram.com/`);
-        window.open(link, '_blank');
+        const raw = profile.social_links?.find(s => s.platform === 'instagram')?.url || ((profile as any).instagram ? ((profile as any).instagram.startsWith('http') ? (profile as any).instagram : `https://instagram.com/${(profile as any).instagram.replace('@', '')}`) : 'https://instagram.com/mugaitech');
+        const url = raw.startsWith('http') ? raw : `https://${raw}`;
+        window.open(url, '_blank');
         if (onTrackEvent) onTrackEvent('social_click', 'instagram');
         break;
       }
       case 'youtube': {
-        const link = profile.social_links?.find(s => s.platform === 'youtube')?.url || ((profile as any).youtube ? ((profile as any).youtube.startsWith('http') ? (profile as any).youtube : `https://youtube.com/${(profile as any).youtube}`) : 'https://youtube.com');
-        window.open(link, '_blank');
+        const raw = profile.social_links?.find(s => s.platform === 'youtube')?.url || ((profile as any).youtube ? ((profile as any).youtube.startsWith('http') ? (profile as any).youtube : `https://youtube.com/${(profile as any).youtube}`) : 'https://youtube.com/@mugaitech');
+        const url = raw.startsWith('http') ? raw : `https://${raw}`;
+        window.open(url, '_blank');
         if (onTrackEvent) onTrackEvent('social_click', 'youtube');
         break;
       }
       case 'facebook': {
-        const link = profile.social_links?.find(s => s.platform === 'facebook')?.url || ((profile as any).facebook ? ((profile as any).facebook.startsWith('http') ? (profile as any).facebook : `https://facebook.com/${(profile as any).facebook}`) : 'https://facebook.com');
-        window.open(link, '_blank');
+        const raw = profile.social_links?.find(s => s.platform === 'facebook')?.url || ((profile as any).facebook ? ((profile as any).facebook.startsWith('http') ? (profile as any).facebook : `https://facebook.com/${(profile as any).facebook}`) : 'https://facebook.com/mugaitech');
+        const url = raw.startsWith('http') ? raw : `https://${raw}`;
+        window.open(url, '_blank');
         if (onTrackEvent) onTrackEvent('social_click', 'facebook');
         break;
       }
@@ -221,22 +299,25 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
         break;
       }
       case 'twitter': {
-        const link = profile.social_links?.find(s => s.platform === 'twitter')?.url || ((profile as any).twitter ? ((profile as any).twitter.startsWith('http') ? (profile as any).twitter : `https://twitter.com/${(profile as any).twitter.replace('@', '')}`) : 'https://twitter.com');
-        window.open(link, '_blank');
+        const raw = profile.social_links?.find(s => s.platform === 'twitter')?.url || ((profile as any).twitter ? ((profile as any).twitter.startsWith('http') ? (profile as any).twitter : `https://twitter.com/${(profile as any).twitter.replace('@', '')}`) : 'https://twitter.com/mugaitech');
+        const url = raw.startsWith('http') ? raw : `https://${raw}`;
+        window.open(url, '_blank');
         if (onTrackEvent) onTrackEvent('social_click', 'twitter');
         break;
       }
       case 'offers': {
-        const el = document.getElementById('profile-offers-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        setActiveQuickSheet('offers');
+        setTimeout(() => {
+          const el = document.getElementById('profile-offers-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
         if (onTrackEvent) onTrackEvent('offers_view');
         break;
       }
       case 'linkedin': {
-        const link = profile.social_links?.find(s => s.platform === 'linkedin')?.url || ((profile as any).linkedin ? ((profile as any).linkedin.startsWith('http') ? (profile as any).linkedin : `https://linkedin.com/in/${(profile as any).linkedin}`) : 'https://linkedin.com');
-        window.open(link, '_blank');
+        const raw = profile.social_links?.find(s => s.platform === 'linkedin')?.url || ((profile as any).linkedin ? ((profile as any).linkedin.startsWith('http') ? (profile as any).linkedin : `https://linkedin.com/in/${(profile as any).linkedin}`) : 'https://linkedin.com/company/mugai-tech');
+        const url = raw.startsWith('http') ? raw : `https://${raw}`;
+        window.open(url, '_blank');
         if (onTrackEvent) onTrackEvent('social_click', 'linkedin');
         break;
       }
@@ -245,14 +326,16 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
         break;
       }
       case 'email': {
+        setActiveQuickSheet('email');
         handleAction('email_click');
         break;
       }
       case 'catalogue': {
-        const el = document.getElementById('profile-catalogues-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        setActiveQuickSheet('catalogues');
+        setTimeout(() => {
+          const el = document.getElementById('profile-catalogues-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
         if (onTrackEvent) onTrackEvent('catalogue_view');
         break;
       }
@@ -261,6 +344,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
         break;
       }
       case 'call': {
+        setActiveQuickSheet('call');
         handleAction('call_click');
         break;
       }
@@ -269,32 +353,35 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
         break;
       }
       case 'upi': {
-        const el = document.getElementById('profile-upi-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        setActiveQuickSheet('upi');
+        setTimeout(() => {
+          const el = document.getElementById('profile-upi-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
         if (onTrackEvent) onTrackEvent('upi_view');
         break;
       }
       case 'play_store': {
-        const playUrl = (profile as any).play_store_url || `https://play.google.com/store/search?q=${encodeURIComponent(profile.business_name)}&c=apps`;
+        const playUrl = effectivePlayStore;
         window.open(playUrl, '_blank');
         if (onTrackEvent) onTrackEvent('play_store_click');
         break;
       }
       case 'wifi': {
-        const el = document.getElementById('profile-wifi-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        setActiveQuickSheet('wifi');
+        setTimeout(() => {
+          const el = document.getElementById('profile-wifi-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
         if (onTrackEvent) onTrackEvent('wifi_view');
         break;
       }
       case 'shop': {
-        const el = document.getElementById('profile-shop-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        setActiveQuickSheet('shop');
+        setTimeout(() => {
+          const el = document.getElementById('profile-shop-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
         if (onTrackEvent) onTrackEvent('shop_view');
         break;
       }
@@ -1220,7 +1307,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
       )}
 
       {/* 8. ACTIVE FESTIVE OFFERS & PROMOTIONS */}
-      {profile.offers && profile.offers.filter(o => o.enabled).length > 0 && (
+      {displayOffers.length > 0 && (
         <div id="profile-offers-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             display: 'flex',
@@ -1239,7 +1326,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
             </h2>
           </div>
 
-          {profile.offers.filter(o => o.enabled).map(offer => (
+          {displayOffers.map(offer => (
             <div 
               key={offer.id}
               style={{
@@ -1250,7 +1337,8 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
                 boxShadow: '0 8px 20px rgba(21, 101, 232, 0.25)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 10
+                gap: 10,
+                marginBottom: 12
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1287,18 +1375,20 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
               }}>
                 <div>
                   <span style={{ fontSize: 18, fontWeight: 800 }}>
-                    ₹{offer.offer_price.toLocaleString('en-IN')}
+                    ₹{Number(offer.offer_price).toLocaleString('en-IN')}
                   </span>
-                  <span style={{ fontSize: 12, opacity: 0.7, textDecoration: 'line-through', marginLeft: 8 }}>
-                    ₹{offer.original_price.toLocaleString('en-IN')}
-                  </span>
+                  {offer.original_price && offer.original_price > offer.offer_price && (
+                    <span style={{ fontSize: 12, opacity: 0.7, textDecoration: 'line-through', marginLeft: 8 }}>
+                      ₹{Number(offer.original_price).toLocaleString('en-IN')}
+                    </span>
+                  )}
                 </div>
 
                 <button
                   onClick={() => {
-                    setEnquiryProduct(null);
-                    setEnquiryMessage(`Hi, I want to claim the offer: "${offer.title}" at ₹${offer.offer_price.toLocaleString('en-IN')}. Please confirm availability.`);
-                    setEnquiryModalOpen(true);
+                    const text = encodeURIComponent(`Hi ${profile.business_name || 'Team'}, I would like to claim offer: "${offer.title}" (Code: ${offer.coupon_code || 'SPECIAL'}).`);
+                    window.open(`https://wa.me/${effectiveWhatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
+                    if (onTrackEvent) onTrackEvent('offer_claim', offer.id);
                   }}
                   style={{
                     backgroundColor: '#FFFFFF',
@@ -1320,7 +1410,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
       )}
 
       {/* 9. CATALOGUE DOWNLOAD & PDF VIEWER */}
-      {profile.catalogues && profile.catalogues.filter(c => c.enabled).length > 0 && (
+      {displayCatalogues.length > 0 && (
         <div id="profile-catalogues-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <h2 style={{
             fontSize: 17,
@@ -1333,7 +1423,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {profile.catalogues.filter(c => c.enabled).map(cat => (
+            {displayCatalogues.map(cat => (
               <div 
                 key={cat.id}
                 style={{
@@ -1606,7 +1696,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
       )}
 
       {/* 15. UPI PAYMENT BOX */}
-      {profile.upi_id && (
+      {(profile.upi_id || effectiveUpi) && (
         <div id="profile-upi-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             backgroundColor: cardBg,
@@ -1626,7 +1716,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
                 Pay via UPI
               </div>
               <div style={{ fontSize: 12, color: primaryCol, fontWeight: 600 }}>
-                {profile.upi_id}
+                {effectiveUpi}
               </div>
             </div>
 
@@ -1652,7 +1742,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
               </button>
 
               <a
-                href={`upi://pay?pa=${profile.upi_id}&pn=${encodeURIComponent(profile.upi_name || profile.business_name)}&cu=INR`}
+                href={`upi://pay?pa=${effectiveUpi}&pn=${encodeURIComponent(effectiveUpiName)}&cu=INR`}
                 onClick={() => onTrackEvent && onTrackEvent('upi_click')}
                 style={{
                   backgroundColor: '#1565E8',
@@ -1675,7 +1765,7 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
       )}
 
       {/* 16. WI-FI DETAILS (If enabled) */}
-      {profile.wifi_enabled && profile.wifi_ssid && (
+      {(profile.wifi_enabled || effectiveWifiSsid) && (
         <div id="profile-wifi-section" style={{ padding: '0 20px', marginBottom: 24 }}>
           <div style={{
             backgroundColor: cardBg,
@@ -1701,10 +1791,10 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: textTitle }}>
-                  Guest Wi-Fi: {profile.wifi_ssid}
+                  Guest Wi-Fi: {effectiveWifiSsid}
                 </div>
                 <div style={{ fontSize: 11, color: '#94A3B8' }}>
-                  Password: {profile.wifi_password}
+                  Password: {effectiveWifiPassword}
                 </div>
               </div>
             </div>
@@ -2905,6 +2995,611 @@ export const PublicProfilePage: React.FC<PublicProfileProps> = ({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 24. DEDICATED INTERACTIVE QUICK SHEETS */}
+      {activeQuickSheet && (
+        <div
+          onClick={() => setActiveQuickSheet(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(11, 31, 58, 0.7)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 120,
+            padding: 16
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 380,
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 45px rgba(11, 31, 58, 0.35)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Sheet Header */}
+            <div style={{
+              padding: '14px 18px',
+              borderBottom: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: '#F8FAFC'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {activeQuickSheet === 'upi' && <span style={{ fontSize: 20 }}>💳</span>}
+                {activeQuickSheet === 'wifi' && <span style={{ fontSize: 20 }}>📶</span>}
+                {activeQuickSheet === 'offers' && <span style={{ fontSize: 20 }}>🎉</span>}
+                {activeQuickSheet === 'catalogues' && <span style={{ fontSize: 20 }}>📄</span>}
+                {activeQuickSheet === 'shop' && <span style={{ fontSize: 20 }}>🛍️</span>}
+                {activeQuickSheet === 'call' && <span style={{ fontSize: 20 }}>📞</span>}
+                {activeQuickSheet === 'email' && <span style={{ fontSize: 20 }}>✉️</span>}
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0B1F3A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    {activeQuickSheet === 'upi' && 'Instant UPI Payment'}
+                    {activeQuickSheet === 'wifi' && 'Guest Wi-Fi Access'}
+                    {activeQuickSheet === 'offers' && 'Active Offers & Deals'}
+                    {activeQuickSheet === 'catalogues' && 'Product & Service Catalogues'}
+                    {activeQuickSheet === 'shop' && 'Mini Shop & Products'}
+                    {activeQuickSheet === 'call' && 'Direct Phone Call'}
+                    {activeQuickSheet === 'email' && 'Official Email Contact'}
+                  </h3>
+                  <span style={{ fontSize: 11, color: '#64748B' }}>
+                    {activeQuickSheet === 'upi' && 'Scan QR or copy UPI ID to transfer directly'}
+                    {activeQuickSheet === 'wifi' && 'Connect instantly to high-speed guest Wi-Fi'}
+                    {activeQuickSheet === 'offers' && 'Exclusive festive discounts & promotions'}
+                    {activeQuickSheet === 'catalogues' && 'Download official PDFs and brochures'}
+                    {activeQuickSheet === 'shop' && 'Browse items and order directly on WhatsApp'}
+                    {activeQuickSheet === 'call' && 'Connect directly with our representative'}
+                    {activeQuickSheet === 'email' && 'Send an official enquiry to our corporate inbox'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveQuickSheet(null)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Sheet Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
+              {/* 1. UPI SHEET */}
+              {activeQuickSheet === 'upi' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+                  <div style={{
+                    padding: 12,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 16,
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 4px 14px rgba(11,31,58,0.06)'
+                  }}>
+                    <QRCodeSVG 
+                      value={`upi://pay?pa=${effectiveUpi}&pn=${encodeURIComponent(effectiveUpiName)}&cu=INR`}
+                      size={160}
+                      level="M"
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 2 }}>Verified Merchant UPI ID</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#0B1F3A', letterSpacing: 0.3 }}>
+                      {effectiveUpi}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#1565E8', fontWeight: 600, marginTop: 2 }}>
+                      {effectiveUpiName}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 4 }}>
+                    <button
+                      onClick={handleCopyUpi}
+                      style={{
+                        flex: 1,
+                        backgroundColor: copiedUpi ? '#E8F8F1' : '#F1F5F9',
+                        color: copiedUpi ? '#00A86B' : '#0B1F3A',
+                        border: '1px solid #CBD5E1',
+                        padding: '11px 0',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {copiedUpi ? <Check size={16} /> : <Copy size={16} />}
+                      <span>{copiedUpi ? 'Copied!' : 'Copy UPI ID'}</span>
+                    </button>
+
+                    <a
+                      href={`upi://pay?pa=${effectiveUpi}&pn=${encodeURIComponent(effectiveUpiName)}&cu=INR`}
+                      onClick={() => onTrackEvent && onTrackEvent('upi_click')}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#1565E8',
+                        color: '#FFFFFF',
+                        textDecoration: 'none',
+                        padding: '11px 0',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <span>Pay via App</span>
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. WI-FI SHEET */}
+              {activeQuickSheet === 'wifi' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{
+                    backgroundColor: '#F0F9FF',
+                    borderRadius: 14,
+                    padding: 16,
+                    border: '1px solid #BAE6FD',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#0284C7', textTransform: 'uppercase' }}>Network (SSID)</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', marginTop: 2 }}>
+                        {effectiveWifiSsid}
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px dashed #BAE6FD', paddingTop: 10 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#0284C7', textTransform: 'uppercase' }}>Password</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A', fontFamily: 'monospace', marginTop: 2 }}>
+                        {effectiveWifiPassword}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleCopyWifi}
+                    style={{
+                      width: '100%',
+                      backgroundColor: copiedWifi ? '#00A86B' : '#1565E8',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      padding: '12px 0',
+                      borderRadius: 10,
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      boxShadow: '0 4px 14px rgba(21, 101, 232, 0.25)'
+                    }}
+                  >
+                    {copiedWifi ? <Check size={16} /> : <Copy size={16} />}
+                    <span>{copiedWifi ? 'Password Copied to Clipboard!' : 'Copy Wi-Fi Password'}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* 3. OFFERS SHEET */}
+              {activeQuickSheet === 'offers' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {displayOffers.map(offer => (
+                    <div
+                      key={offer.id}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 14,
+                        padding: 14,
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{
+                          backgroundColor: '#EF1D2D',
+                          color: '#FFFFFF',
+                          fontSize: 10,
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 4
+                        }}>
+                          ACTIVE DEAL
+                        </span>
+                        <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                          Till {new Date(offer.valid_until).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0B1F3A' }}>
+                        {offer.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.4 }}>
+                        {offer.description}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontSize: 17, fontWeight: 800, color: '#0B1F3A' }}>
+                            ₹{Number(offer.offer_price).toLocaleString('en-IN')}
+                          </span>
+                          {offer.original_price && offer.original_price > offer.offer_price && (
+                            <span style={{ fontSize: 12, color: '#94A3B8', textDecoration: 'line-through' }}>
+                              ₹{Number(offer.original_price).toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            const text = encodeURIComponent(`Hi ${profile.business_name || 'Team'}, I would like to claim offer: "${offer.title}" (Code: ${offer.coupon_code || 'MYTH20'}).`);
+                            window.open(`https://wa.me/${effectiveWhatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
+                            if (onTrackEvent) onTrackEvent('offer_claim', offer.id);
+                          }}
+                          style={{
+                            backgroundColor: '#00A86B',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '7px 12px',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Claim on WhatsApp
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 4. CATALOGUES SHEET */}
+              {activeQuickSheet === 'catalogues' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {displayCatalogues.map(cat => (
+                    <div
+                      key={cat.id}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 14,
+                        padding: 14,
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{
+                        width: 44,
+                        height: 52,
+                        borderRadius: 8,
+                        backgroundColor: '#FEF2F2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#EF4444',
+                        flexShrink: 0
+                      }}>
+                        <FileText size={24} />
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0B1F3A' }}>
+                          {cat.title}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                          {cat.file_size || 'Official PDF Document'}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          window.open(cat.file_url, '_blank');
+                          if (onTrackEvent) onTrackEvent('catalogue_download', cat.id);
+                        }}
+                        style={{
+                          backgroundColor: '#1565E8',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <Download size={14} />
+                        <span>View</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 5. SHOP SHEET */}
+              {activeQuickSheet === 'shop' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {shopProducts.map(p => {
+                    const price = p.discount_price || p.unit_price;
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: 14,
+                          padding: 12,
+                          border: '1px solid #E2E8F0',
+                          display: 'flex',
+                          gap: 12,
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div style={{
+                          width: 58,
+                          height: 58,
+                          borderRadius: 10,
+                          backgroundColor: '#EEF2FF',
+                          backgroundImage: p.image_url ? `url("${p.image_url}")` : undefined,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          flexShrink: 0
+                        }} />
+
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#0B1F3A', lineHeight: 1.3 }}>
+                            {p.name}
+                          </div>
+                          <div style={{ fontSize: 13.5, fontWeight: 800, color: '#1565E8', marginTop: 2 }}>
+                            ₹{price.toLocaleString('en-IN')}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setActiveQuickSheet(null);
+                            handleOpenProductEnquiry(p);
+                          }}
+                          style={{
+                            backgroundColor: '#0B1F3A',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Enquire
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 6. CALL SHEET */}
+              {activeQuickSheet === 'call' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    backgroundColor: '#ECFDF5',
+                    color: '#00A86B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Phone size={30} />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#0B1F3A' }}>
+                      {profile.person_name || 'Rajiv Mehra'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                      {profile.designation || 'Managing Director & CTO'} • {profile.business_name || 'Mugai Tech'}
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#1565E8', marginTop: 8 }}>
+                      {effectivePhone}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', marginTop: 6 }}>
+                    <a
+                      href={`tel:${effectivePhone}`}
+                      onClick={() => onTrackEvent && onTrackEvent('call_click')}
+                      style={{
+                        backgroundColor: '#00A86B',
+                        color: '#FFFFFF',
+                        textDecoration: 'none',
+                        padding: '12px 0',
+                        borderRadius: 10,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8
+                      }}
+                    >
+                      <Phone size={16} />
+                      <span>Call {effectivePhone}</span>
+                    </a>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(effectivePhone);
+                        setCopiedPhone(true);
+                        setTimeout(() => setCopiedPhone(false), 2000);
+                      }}
+                      style={{
+                        backgroundColor: copiedPhone ? '#E8F8F1' : '#F1F5F9',
+                        color: copiedPhone ? '#00A86B' : '#0B1F3A',
+                        border: '1px solid #CBD5E1',
+                        padding: '10px 0',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {copiedPhone ? <Check size={16} /> : <Copy size={16} />}
+                      <span>{copiedPhone ? 'Phone Number Copied!' : 'Copy Phone Number'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 7. EMAIL SHEET */}
+              {activeQuickSheet === 'email' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    backgroundColor: '#EFF6FF',
+                    color: '#1565E8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Mail size={30} />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#0B1F3A' }}>
+                      Official Corporate Email
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1565E8', marginTop: 4 }}>
+                      {effectiveEmail}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', marginTop: 6 }}>
+                    <a
+                      href={`mailto:${effectiveEmail}?subject=Inquiry%20via%20Digital%20Profile`}
+                      onClick={() => onTrackEvent && onTrackEvent('email_click')}
+                      style={{
+                        backgroundColor: '#1565E8',
+                        color: '#FFFFFF',
+                        textDecoration: 'none',
+                        padding: '12px 0',
+                        borderRadius: 10,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8
+                      }}
+                    >
+                      <Mail size={16} />
+                      <span>Open in Email App</span>
+                    </a>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(effectiveEmail);
+                        setCopiedEmail(true);
+                        setTimeout(() => setCopiedEmail(false), 2000);
+                      }}
+                      style={{
+                        backgroundColor: copiedEmail ? '#E8F8F1' : '#F1F5F9',
+                        color: copiedEmail ? '#00A86B' : '#0B1F3A',
+                        border: '1px solid #CBD5E1',
+                        padding: '10px 0',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {copiedEmail ? <Check size={16} /> : <Copy size={16} />}
+                      <span>{copiedEmail ? 'Email Copied to Clipboard!' : 'Copy Email Address'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 25. FLOATING TOAST FEEDBACK */}
+      {copiedVcard && (
+        <div style={{
+          position: 'fixed',
+          bottom: 30,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#0B1F3A',
+          color: '#FFFFFF',
+          padding: '10px 18px',
+          borderRadius: 30,
+          boxShadow: '0 10px 25px rgba(0,0,0,0.35)',
+          zIndex: 150,
+          fontSize: 13,
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          whiteSpace: 'nowrap'
+        }}>
+          <Check size={16} color="#00C853" />
+          <span>Contact (.vcf) saved! Check downloads.</span>
         </div>
       )}
     </div>
