@@ -65,21 +65,34 @@ fi
 echo "Installing backend dependencies..."
 $NPM_BIN install --production --silent
 
-# 4. Stop old process and start fresh
-pkill -f "backend-node/server.js" 2>/dev/null || true
+# 4. Copy API Proxy & .htaccess to public_html
+WEB_ROOT="${HOME:-/home/u395270878}/domains/rkenterprisess.net/public_html"
+if [ ! -d "$WEB_ROOT" ]; then
+    WEB_ROOT="${HOME:-/home/u395270878}/public_html"
+fi
+
+mkdir -p "$WEB_ROOT"
+cp "$PROJECT_DIR/frontend/dist/api-proxy.php" "$WEB_ROOT/" 2>/dev/null || true
+cp "$PROJECT_DIR/frontend/dist/.htaccess" "$WEB_ROOT/" 2>/dev/null || true
+
+# 5. Stop old process and start fresh
+pkill -f "server.js" 2>/dev/null || true
 sleep 1
 
-PORT=5050 nohup $NODE_BIN server.js > "$HOME/backend.log" 2>&1 &
+PORT=5050 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$HOME/backend.log" 2>&1 &
 sleep 2
 
-# 5. Check status
-if pgrep -f "backend-node/server.js" > /dev/null; then
+# 6. Check status
+if pgrep -f "server.js" > /dev/null; then
     echo "=================================================="
-    echo " 🎉 BACKEND SUCCESSFULLY STARTED ON PORT 5050!"
-    echo " PID: $(pgrep -f "backend-node/server.js" | head -n1)"
+    echo " 🎉 BACKEND SUCCESSFULLY RUNNING ON PORT 5050!"
+    echo " PID: $(pgrep -f "server.js" | head -n1)"
     echo " API: https://rkenterprisess.net/api"
     echo " Log: $HOME/backend.log"
     echo "=================================================="
+    echo "Testing internal API endpoint:"
+    curl -s http://127.0.0.1:5050/api || true
+    echo ""
 else
     echo "Backend process exited. Recent log output:"
     cat "$HOME/backend.log"
@@ -87,3 +100,4 @@ fi
 
 # 6. Auto-start on reboot
 (crontab -l 2>/dev/null | grep -v "server.js" ; echo "@reboot cd $PROJECT_DIR/backend-node && PORT=5050 $NODE_BIN server.js >> $HOME/backend.log 2>&1 &") | crontab - 2>/dev/null || true
+

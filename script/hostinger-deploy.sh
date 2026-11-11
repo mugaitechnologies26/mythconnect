@@ -146,15 +146,11 @@ cat << 'EOF' > "$WEB_ROOT/.htaccess"
 RewriteEngine On
 RewriteBase /
 
-# 1. Reverse Proxy API requests to Node.js backend
-RewriteRule ^api/(.*)$ http://127.0.0.1:5050/api/$1 [P,L]
+# 1. Forward /api and /api/* to the PHP reverse proxy
+RewriteRule ^api$ api-proxy.php?__path= [QSA,L]
+RewriteRule ^api/(.*)$ api-proxy.php?__path=$1 [QSA,L]
 
-# 2. Reverse Proxy WebSocket gateway
-RewriteCond %{HTTP:Upgrade} websocket [NC]
-RewriteCond %{HTTP:Connection} upgrade [NC]
-RewriteRule ^ws(.*)$ ws://127.0.0.1:5050/ws$1 [P,L]
-
-# 3. Single Page Application (SPA) routing fallback
+# 2. Single Page Application (SPA) routing fallback
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
