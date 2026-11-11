@@ -1,23 +1,64 @@
 <?php
 /**
- * Myth Connect.ai - Hostinger Intelligent Auto-Healing API Proxy
- * Bridges web requests to internal Node.js backend
+ * Myth Connect.ai - Hostinger Intelligent Auto-Healing API Proxy & Diagnostic
  */
 
+$path = isset($_GET['__path']) ? trim($_GET['__path'], '/') : '';
+
+// -----------------------------------------------------------------------------
+// Diagnostic Handler: /api/diag
+// -----------------------------------------------------------------------------
+if ($path === 'diag' || $path === 'debug') {
+    header('Content-Type: application/json');
+    $home = getenv('HOME') ?: (isset($_SERVER['DOCUMENT_ROOT']) ? dirname(dirname($_SERVER['DOCUMENT_ROOT'])) : '/home/u395270878');
+    
+    // Check running node processes
+    $ps = shell_exec('ps aux | grep node 2>&1') ?: 'None';
+    
+    // Check backend log
+    $log_file = "$home/backend.log";
+    $log = file_exists($log_file) ? file_get_contents($log_file) : 'No log file found at ' . $log_file;
+    if (strlen($log) > 2000) {
+        $log = substr($log, -2000);
+    }
+
+    // Test ports
+    $port_tests = [];
+    foreach ([5050, 5000, 3000] as $port) {
+        $fp = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.5);
+        if ($fp) {
+            $port_tests["127.0.0.1:$port"] = 'OPEN';
+            fclose($fp);
+        } else {
+            $port_tests["127.0.0.1:$port"] = "CLOSED ($errstr)";
+        }
+    }
+
+    echo json_encode([
+        'server_time' => date('Y-m-d H:i:s'),
+        'user' => get_current_user(),
+        'doc_root' => $_SERVER['DOCUMENT_ROOT'] ?? '',
+        'home' => $home,
+        'ps_aux' => $ps,
+        'port_tests' => $port_tests,
+        'recent_backend_log' => $log
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
+// -----------------------------------------------------------------------------
+// Normal API Forwarding
+// -----------------------------------------------------------------------------
 $candidate_ports = [5050, 5000, 3000];
 $candidate_hosts = ['127.0.0.1', 'localhost'];
 
-$path = isset($_GET['__path']) ? $_GET['__path'] : '';
 $query = $_SERVER['QUERY_STRING'] ?? '';
-
-// Strip __path from query string
 $query_parts = [];
 parse_str($query, $query_parts);
 unset($query_parts['__path']);
 $clean_query = http_build_query($query_parts);
-$subpath = '/api' . ($path ? '/' . ltrim($path, '/') : '') . ($clean_query ? '?' . $clean_query : '');
+$subpath = '/api' . ($path ? '/' . $path : '') . ($clean_query ? '?' . $clean_query : '');
 
-// Forward headers
 $headers = [];
 $incoming_headers = function_exists('getallheaders') ? getallheaders() : [];
 foreach ($incoming_headers as $name => $value) {
@@ -27,7 +68,6 @@ foreach ($incoming_headers as $name => $value) {
     }
 }
 
-// Read body
 $method = $_SERVER['REQUEST_METHOD'];
 $body = '';
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
@@ -56,7 +96,7 @@ function try_request($target_url, $method, $headers, $body, $timeout = 2) {
 
 $success_result = null;
 
-// Attempt connection across candidate ports and loopback hosts
+// Try active ports
 foreach ($candidate_hosts as $h) {
     foreach ($candidate_ports as $p) {
         $url = "http://{$h}:{$p}{$subpath}";
@@ -68,37 +108,29 @@ foreach ($candidate_hosts as $h) {
     }
 }
 
-// If no backend is responding, auto-heal and boot the Node.js process
+// Auto-heal: If all ports failed, spawn the Node server
 if (!$success_result) {
-    $home = getenv('HOME') ?: (isset($_SERVER['DOCUMENT_ROOT']) ? dirname($_SERVER['DOCUMENT_ROOT']) : '/home/u395270878');
+    $home = getenv('HOME') ?: '/home/u395270878';
     $project_dir = "$home/mythconnect";
     $backend_dir = "$project_dir/backend-node";
 
-    // Detect node binary
     $node_bin = '/opt/alt/alt-nodejs20/root/usr/bin/node';
     if (!file_exists($node_bin)) {
         $node_bin = trim(`which node 2>/dev/null` ?: '');
     }
-    if (!$node_bin || !file_exists($node_bin)) {
-        $node_bin = "$home/.nvm/versions/node/v20.20.2/bin/node";
-    }
 
     if (file_exists("$backend_dir/server.js") && file_exists($node_bin)) {
-        // Start process in background
         $cmd = "cd " . escapeshellarg($backend_dir) . " && PORT=5050 nohup " . escapeshellarg($node_bin) . " server.js > " . escapeshellarg("$home/backend.log") . " 2>&1 &";
         exec($cmd);
-        usleep(1500000); // Wait 1.5s for initialization
+        usleep(1500000); // 1.5s wait
 
-        // Retry connection
-        $retry_url = "http://127.0.0.1:5050{$subpath}";
-        $res = try_request($retry_url, $method, $headers, $body, 3);
+        $res = try_request("http://127.0.0.1:5050{$subpath}", $method, $headers, $body, 3);
         if ($res['errno'] === 0) {
             $success_result = $res;
         }
     }
 }
 
-// Final response dispatch
 if ($success_result && $success_result['errno'] === 0) {
     $response = $success_result['response'];
     $header_size = $success_result['info']['header_size'];
@@ -120,6 +152,7 @@ if ($success_result && $success_result['errno'] === 0) {
     echo json_encode([
         'success' => false,
         'error' => 'BackendUnavailable',
-        'message' => "Unable to connect to Node.js backend: $last_error"
+        'message' => "Unable to connect to Node.js backend: $last_error",
+        'hint' => 'Visit https://rkenterprisess.net/api/diag to inspect the backend process state.'
     ]);
 }
