@@ -118,8 +118,8 @@ app.use((err, req, res, next) => {
 
 // Start Server & verify database connection
 const PORT = config.port;
-server.listen(PORT, async () => {
-  logger.success('STARTUP', `Myth Connect.ai Node Server running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', async () => {
+  logger.success('STARTUP', `Myth Connect.ai Node Server running on http://0.0.0.0:${PORT}`);
   logger.info('STARTUP', `WebSocket Gateway ready on ws://localhost:${PORT}/ws`);
   logger.info('STARTUP', `Meta Webhooks ready on http://localhost:${PORT}/webhooks/meta`);
   logger.info('STARTUP', `WhatsApp Webhooks ready on http://localhost:${PORT}/webhooks/whatsapp`);
