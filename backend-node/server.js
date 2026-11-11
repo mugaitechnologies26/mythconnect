@@ -118,6 +118,27 @@ app.use((err, req, res, next) => {
 
 // Start Server & verify database connection
 const PORT = config.port;
+
+server.on('error', (err) => {
+  logger.error('SERVER_FATAL', `HTTP Server error: ${err.message}`, err);
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('UNCAUGHT_EXCEPTION', `Uncaught exception: ${err.message}`, { stack: err.stack });
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('UNHANDLED_REJECTION', `Unhandled rejection: ${String(reason)}`);
+});
+
+process.on('exit', (code) => {
+  logger.warn('PROCESS_EXIT', `Node process exiting with code: ${code}`);
+});
+
+process.on('SIGTERM', () => {
+  logger.warn('SIGNAL', 'Received SIGTERM signal.');
+});
+
 server.listen(PORT, '0.0.0.0', async () => {
   logger.success('STARTUP', `Myth Connect.ai Node Server running on http://0.0.0.0:${PORT}`);
   logger.info('STARTUP', `WebSocket Gateway ready on ws://localhost:${PORT}/ws`);

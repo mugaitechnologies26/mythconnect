@@ -79,7 +79,15 @@ cp "$PROJECT_DIR/frontend/dist/.htaccess" "$WEB_ROOT/" 2>/dev/null || true
 pkill -f "server.js" 2>/dev/null || true
 sleep 1
 
-PORT=5050 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$HOME/backend.log" 2>&1 &
+# Try PM2 first if available, else nohup with disown
+if command -v pm2 &> /dev/null; then
+    pm2 delete mythconnect 2>/dev/null || true
+    PORT=5050 pm2 start "$PROJECT_DIR/backend-node/server.js" --name mythconnect
+    pm2 save 2>/dev/null || true
+else
+    PORT=5050 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$HOME/backend.log" 2>&1 &
+    disown -a 2>/dev/null || true
+fi
 sleep 2
 
 # 6. Check status
