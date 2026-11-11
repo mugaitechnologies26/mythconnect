@@ -82,10 +82,10 @@ sleep 1
 # Try PM2 first if available, else nohup with disown
 if command -v pm2 &> /dev/null; then
     pm2 delete mythconnect 2>/dev/null || true
-    PORT=5050 pm2 start "$PROJECT_DIR/backend-node/server.js" --name mythconnect
+    PORT=39527 pm2 start "$PROJECT_DIR/backend-node/server.js" --name mythconnect
     pm2 save 2>/dev/null || true
 else
-    PORT=5050 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$HOME/backend.log" 2>&1 &
+    PORT=39527 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$HOME/backend.log" 2>&1 &
     disown -a 2>/dev/null || true
 fi
 sleep 2
@@ -93,13 +93,13 @@ sleep 2
 # 6. Check status
 if pgrep -f "server.js" > /dev/null; then
     echo "=================================================="
-    echo " 🎉 BACKEND SUCCESSFULLY RUNNING ON PORT 5050!"
+    echo " 🎉 BACKEND SUCCESSFULLY RUNNING ON PORT 39527!"
     echo " PID: $(pgrep -f "server.js" | head -n1)"
     echo " API: https://rkenterprisess.net/api"
     echo " Log: $HOME/backend.log"
     echo "=================================================="
     echo "Testing internal API endpoint:"
-    curl -s http://127.0.0.1:5050/api || true
+    curl -s http://127.0.0.1:39527/api || true
     echo ""
 else
     echo "Backend process exited. Recent log output:"

@@ -24,7 +24,7 @@ if ($path === 'diag' || $path === 'debug') {
 
     // Test ports
     $port_tests = [];
-    foreach ([5050, 5000, 3000] as $port) {
+    foreach ([39527, 5050, 5000, 3000] as $port) {
         $fp = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.5);
         if ($fp) {
             $port_tests["127.0.0.1:$port"] = 'OPEN';
@@ -49,7 +49,7 @@ if ($path === 'diag' || $path === 'debug') {
 // -----------------------------------------------------------------------------
 // Normal API Forwarding
 // -----------------------------------------------------------------------------
-$candidate_ports = [5050, 5000, 3000];
+$candidate_ports = [39527, 5050, 5000, 3000];
 $candidate_hosts = ['127.0.0.1', 'localhost'];
 
 $query = $_SERVER['QUERY_STRING'] ?? '';
@@ -120,11 +120,11 @@ if (!$success_result) {
     }
 
     if (file_exists("$backend_dir/server.js") && file_exists($node_bin)) {
-        $cmd = "cd " . escapeshellarg($backend_dir) . " && PORT=5050 nohup " . escapeshellarg($node_bin) . " server.js > " . escapeshellarg("$home/backend.log") . " 2>&1 &";
+        $cmd = "cd " . escapeshellarg($backend_dir) . " && PORT=39527 nohup " . escapeshellarg($node_bin) . " server.js > " . escapeshellarg("$home/backend.log") . " 2>&1 &";
         exec($cmd);
         usleep(1500000); // 1.5s wait
 
-        $res = try_request("http://127.0.0.1:5050{$subpath}", $method, $headers, $body, 3);
+        $res = try_request("http://127.0.0.1:39527{$subpath}", $method, $headers, $body, 3);
         if ($res['errno'] === 0) {
             $success_result = $res;
         }

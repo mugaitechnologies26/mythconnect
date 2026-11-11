@@ -2,7 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 module.exports = {
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 39527,
   nodeEnv: process.env.NODE_ENV || 'development',
   appUrl: process.env.APP_URL || 'https://mythconnect.mugaitechnologies.in',
   laravelApiUrl: process.env.LARAVEL_API_URL || 'http://127.0.0.1:8000/api',
