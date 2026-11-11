@@ -45,10 +45,10 @@ fi
 
 cd "$PROJECT_DIR/backend-node"
 
-# 2. Configure .env if missing
+# 2. Configure .env if missing or update port to 39527
 if [ ! -f .env ]; then
 cat << EOF > .env
-PORT=5050
+PORT=39527
 NODE_ENV=production
 APP_URL=https://rkenterprisess.net
 DB_HOST=localhost
@@ -59,6 +59,9 @@ DB_NAME=u395270878_crm
 JWT_SECRET=mythconnect_rkenterprisess_secure_jwt_2026
 CORS_ORIGIN=*
 EOF
+else
+    # Ensure port is strictly 39527 to prevent conflicts on shared host
+    sed -i 's/PORT=.*/PORT=39527/g' .env 2>/dev/null || true
 fi
 
 # 3. Install dependencies
@@ -74,38 +77,46 @@ fi
 mkdir -p "$WEB_ROOT"
 cp "$PROJECT_DIR/frontend/dist/api-proxy.php" "$WEB_ROOT/" 2>/dev/null || true
 cp "$PROJECT_DIR/frontend/dist/.htaccess" "$WEB_ROOT/" 2>/dev/null || true
+# Also copy to ~/public_html as safety fallback
+if [ "$WEB_ROOT" != "${HOME:-/home/u395270878}/public_html" ]; then
+    mkdir -p "${HOME:-/home/u395270878}/public_html"
+    cp "$PROJECT_DIR/frontend/dist/api-proxy.php" "${HOME:-/home/u395270878}/public_html/" 2>/dev/null || true
+    cp "$PROJECT_DIR/frontend/dist/.htaccess" "${HOME:-/home/u395270878}/public_html/" 2>/dev/null || true
+fi
 
-# 5. Stop old process and start fresh
-pkill -f "server.js" 2>/dev/null || true
+# 5. Stop old processes cleanly
+echo "Stopping any existing node processes..."
+pkill -9 -u "$USER" -f "server.js" 2>/dev/null || true
+pkill -9 -u "$USER" -f "alt-nodejs" 2>/dev/null || true
 sleep 1
 
-# Try PM2 first if available, else nohup with disown
-if command -v pm2 &> /dev/null; then
-    pm2 delete mythconnect 2>/dev/null || true
-    PORT=39527 pm2 start "$PROJECT_DIR/backend-node/server.js" --name mythconnect
-    pm2 save 2>/dev/null || true
-else
-    PORT=39527 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$HOME/backend.log" 2>&1 &
-    disown -a 2>/dev/null || true
-fi
+# Start fresh on dedicated port 39527
+echo "Launching Myth Connect Node server on port 39527..."
+PORT=39527 nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" </dev/null >> "$HOME/backend.log" 2>&1 &
+disown -h %1 2>/dev/null || disown -a 2>/dev/null || true
 sleep 2
 
 # 6. Check status
 if pgrep -f "server.js" > /dev/null; then
+    PID=$(pgrep -f "server.js" | head -n1)
     echo "=================================================="
     echo " 🎉 BACKEND SUCCESSFULLY RUNNING ON PORT 39527!"
-    echo " PID: $(pgrep -f "server.js" | head -n1)"
+    echo " PID: $PID"
     echo " API: https://rkenterprisess.net/api"
     echo " Log: $HOME/backend.log"
     echo "=================================================="
-    echo "Testing internal API endpoint:"
+    echo "Testing internal loopback response:"
     curl -s http://127.0.0.1:39527/api || true
     echo ""
 else
     echo "Backend process exited. Recent log output:"
-    cat "$HOME/backend.log"
+    tail -n 25 "$HOME/backend.log"
 fi
 
-# 6. Auto-start on reboot
-(crontab -l 2>/dev/null | grep -v "server.js" ; echo "@reboot cd $PROJECT_DIR/backend-node && PORT=5050 $NODE_BIN server.js >> $HOME/backend.log 2>&1 &") | crontab - 2>/dev/null || true
+# 7. Persistent Crontab Watchdog & Reboot auto-start
+CRON_WATCHDOG="* * * * * pgrep -f \"server.js\" >/dev/null || (cd $PROJECT_DIR/backend-node && PORT=39527 $NODE_BIN server.js </dev/null >> $HOME/backend.log 2>&1 &)"
+CRON_REBOOT="@reboot sleep 10 && cd $PROJECT_DIR/backend-node && PORT=39527 $NODE_BIN server.js </dev/null >> $HOME/backend.log 2>&1 &"
+
+(crontab -l 2>/dev/null | grep -v "server.js" ; echo "$CRON_WATCHDOG" ; echo "$CRON_REBOOT") | crontab - 2>/dev/null || true
+echo "✔ Crontab watchdog registered (auto-restarts within 60s if stopped)."
 

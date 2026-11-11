@@ -63,7 +63,7 @@ $headers = [];
 $incoming_headers = function_exists('getallheaders') ? getallheaders() : [];
 foreach ($incoming_headers as $name => $value) {
     $lower = strtolower($name);
-    if ($lower !== 'host' && $lower !== 'content-length') {
+    if (!in_array($lower, ['host', 'content-length', 'connection', 'accept-encoding'])) {
         $headers[] = "$name: $value";
     }
 }
@@ -81,6 +81,7 @@ function try_request($target_url, $method, $headers, $body, $timeout = 2) {
     curl_setopt($ch, CURLOPT_HEADER, true);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_ENCODING, '');
     if (!empty($body)) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
     }
@@ -110,7 +111,7 @@ foreach ($candidate_hosts as $h) {
 
 // Auto-heal: If all ports failed, spawn the Node server
 if (!$success_result) {
-    $home = getenv('HOME') ?: '/home/u395270878';
+    $home = getenv('HOME') ?: (isset($_SERVER['DOCUMENT_ROOT']) ? dirname(dirname($_SERVER['DOCUMENT_ROOT'])) : '/home/u395270878');
     $project_dir = "$home/mythconnect";
     $backend_dir = "$project_dir/backend-node";
 
@@ -119,9 +120,9 @@ if (!$success_result) {
         $node_bin = trim(`which node 2>/dev/null` ?: '');
     }
 
-    if (file_exists("$backend_dir/server.js") && file_exists($node_bin)) {
-        $cmd = "cd " . escapeshellarg($backend_dir) . " && PORT=39527 nohup " . escapeshellarg($node_bin) . " server.js > " . escapeshellarg("$home/backend.log") . " 2>&1 &";
-        exec($cmd);
+    if (file_exists("$backend_dir/server.js") && $node_bin && file_exists($node_bin)) {
+        $cmd = "cd " . escapeshellarg($backend_dir) . " && PORT=39527 nohup " . escapeshellarg($node_bin) . " server.js </dev/null >> " . escapeshellarg("$home/backend.log") . " 2>&1 &";
+        @exec($cmd);
         usleep(1500000); // 1.5s wait
 
         $res = try_request("http://127.0.0.1:39527{$subpath}", $method, $headers, $body, 3);
@@ -140,9 +141,13 @@ if ($success_result && $success_result['errno'] === 0) {
 
     http_response_code($status_code);
     foreach (explode("\r\n", $res_headers) as $hdr) {
-        if ($hdr && !preg_match('/^(Transfer-Encoding|Connection):/i', $hdr)) {
-            header($hdr, false);
+        $hdr = trim($hdr);
+        if (!$hdr) continue;
+        if (stripos($hdr, 'HTTP/') === 0) continue;
+        if (preg_match('/^(Transfer-Encoding|Connection|Content-Length|Content-Encoding):/i', $hdr)) {
+            continue;
         }
+        header($hdr);
     }
     echo $res_body;
 } else {

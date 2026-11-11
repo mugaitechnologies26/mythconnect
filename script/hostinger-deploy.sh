@@ -35,7 +35,7 @@ DB_USER="u395270878_admin"
 DB_PASS="Ajay@2001and2025"
 DB_NAME="u395270878_crm"
 DB_HOST="localhost"
-APP_PORT="5050"
+APP_PORT="39527"
 
 # ------------------------------------------------------------------------------
 # 0. Ensure Node.js and NPM are available (Hostinger CloudLinux or NVM)
