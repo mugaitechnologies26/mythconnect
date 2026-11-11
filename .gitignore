@@ -6,6 +6,8 @@ package-lock.json.log
 # Production builds
 dist/
 */dist/
+!frontend/dist/
+!frontend/dist/**
 build/
 */build/
 out/

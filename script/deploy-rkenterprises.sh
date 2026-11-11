@@ -275,3 +275,4 @@ if [ -n "$HEALTH" ]; then
     echo -e "  💚 Backend Health Status: ${GREEN}${HEALTH}${NC}"
 fi
 echo -e "${CYAN}================================================================================${NC}\n"
+

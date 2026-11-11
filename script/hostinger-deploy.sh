@@ -37,7 +37,40 @@ DB_NAME="u395270878_crm"
 DB_HOST="localhost"
 APP_PORT="5050"
 
-echo -e "${BLUE}[1/6] Setting up project directory at ${PROJECT_DIR}...${NC}"
+# ------------------------------------------------------------------------------
+# 0. Ensure Node.js and NPM are available (Hostinger CloudLinux or NVM)
+# ------------------------------------------------------------------------------
+echo -e "${BLUE}[0/6] Detecting Node.js runtime environment...${NC}"
+for alt_path in /opt/alt/alt-nodejs20/root/usr/bin /opt/alt/alt-nodejs18/root/usr/bin /usr/local/bin /usr/bin; do
+    if [ -f "$alt_path/node" ]; then
+        export PATH="$alt_path:$PATH"
+        break
+    fi
+done
+
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    \. "$NVM_DIR/nvm.sh"
+fi
+
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo -e "${YELLOW}  Node.js/npm not in PATH. Installing Node.js v20 via NVM in user home...${NC}"
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install 20
+    nvm use 20
+fi
+
+NODE_BIN=$(command -v node)
+NPM_BIN=$(command -v npm)
+echo -e "  ✔ Using Node: ${GREEN}$($NODE_BIN -v)${NC} at $NODE_BIN"
+echo -e "  ✔ Using NPM:  ${GREEN}$($NPM_BIN -v)${NC} at $NPM_BIN"
+
+# ------------------------------------------------------------------------------
+# 1. Project Directory & Git Sync
+# ------------------------------------------------------------------------------
+echo -e "\n${BLUE}[1/6] Setting up project directory at ${PROJECT_DIR}...${NC}"
 if [ -d "$PROJECT_DIR" ]; then
     cd "$PROJECT_DIR"
     git fetch origin main
@@ -47,6 +80,9 @@ else
     cd "$PROJECT_DIR"
 fi
 
+# ------------------------------------------------------------------------------
+# 2. Database Initialization
+# ------------------------------------------------------------------------------
 echo -e "\n${BLUE}[2/6] Initializing MySQL Database (${DB_NAME})...${NC}"
 # Test connection with full name, fallback to short name if needed
 if ! mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" -e "USE \`$DB_NAME\`;" 2>/dev/null; then
@@ -61,6 +97,9 @@ echo -e "  -> Importing initial database seeds..."
 mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$PROJECT_DIR/database/seeds.sql" || true
 echo -e "  ${GREEN}✔ Database setup complete.${NC}"
 
+# ------------------------------------------------------------------------------
+# 3. Environment Configuration
+# ------------------------------------------------------------------------------
 echo -e "\n${BLUE}[3/6] Configuring Backend Environment...${NC}"
 cat << EOF > "$PROJECT_DIR/backend-node/.env"
 PORT=${APP_PORT}
@@ -75,18 +114,29 @@ JWT_SECRET=mythconnect_rkenterprisess_secure_jwt_2026
 CORS_ORIGIN=*
 EOF
 
-echo -e "\n${BLUE}[4/6] Installing dependencies and building frontend...${NC}"
+# ------------------------------------------------------------------------------
+# 4. Backend Dependencies & Frontend Assets
+# ------------------------------------------------------------------------------
+echo -e "\n${BLUE}[4/6] Installing backend dependencies...${NC}"
 cd "$PROJECT_DIR/backend-node"
-npm install --silent
+$NPM_BIN install --production --silent
 
-cd "$PROJECT_DIR/frontend"
-cat << EOF > "$PROJECT_DIR/frontend/.env.production"
+if [ -f "$PROJECT_DIR/frontend/dist/index.html" ]; then
+    echo -e "  ✔ Found pre-built production frontend assets."
+else
+    echo -e "  -> Building frontend SPA with $NPM_BIN..."
+    cd "$PROJECT_DIR/frontend"
+    cat << EOF > "$PROJECT_DIR/frontend/.env.production"
 VITE_API_URL=https://rkenterprisess.net
 VITE_WS_URL=wss://rkenterprisess.net/ws
 EOF
-npm install --silent
-npm run build
+    $NPM_BIN install --silent
+    $NPM_BIN run build
+fi
 
+# ------------------------------------------------------------------------------
+# 5. Publish Frontend to Web Root & Configure .htaccess
+# ------------------------------------------------------------------------------
 echo -e "\n${BLUE}[5/6] Publishing Frontend to Web Root (${WEB_ROOT})...${NC}"
 mkdir -p "$WEB_ROOT"
 cp -r "$PROJECT_DIR/frontend/dist/"* "$WEB_ROOT/"
@@ -112,21 +162,26 @@ EOF
 
 echo -e "  ${GREEN}✔ Frontend deployed to public_html with .htaccess reverse proxy.${NC}"
 
-echo -e "\n${BLUE}[6/6] Starting Backend Service...${NC}"
+# ------------------------------------------------------------------------------
+# 6. Start Backend Process & Crontab Auto-Restart
+# ------------------------------------------------------------------------------
+echo -e "\n${BLUE}[6/6] Starting Backend Service on port ${APP_PORT}...${NC}"
 cd "$PROJECT_DIR"
-if command -v pm2 &> /dev/null; then
-    pm2 stop mythconnect-api 2>/dev/null || true
-    pm2 delete mythconnect-api 2>/dev/null || true
-    PORT=$APP_PORT pm2 start "$PROJECT_DIR/backend-node/server.js" --name mythconnect-api
-    pm2 save 2>/dev/null || true
+pkill -f "backend-node/server.js" 2>/dev/null || true
+
+PORT=$APP_PORT nohup $NODE_BIN "$PROJECT_DIR/backend-node/server.js" > "$PROJECT_DIR/backend.log" 2>&1 &
+sleep 2
+
+# Verify process is running
+if pgrep -f "backend-node/server.js" > /dev/null; then
+    echo -e "  ${GREEN}✔ Backend running on port ${APP_PORT} (PID: $(pgrep -f "backend-node/server.js" | head -n1))${NC}"
 else
-    # Fallback to nohup if PM2 is not installed
-    pkill -f "backend-node/server.js" 2>/dev/null || true
-    nohup node "$PROJECT_DIR/backend-node/server.js" > "$PROJECT_DIR/backend.log" 2>&1 &
+    echo -e "  ${YELLOW}[WARN] Checking backend log:${NC}"
+    tail -n 15 "$PROJECT_DIR/backend.log" || true
 fi
 
-# Ensure process auto-restarts via crontab
-(crontab -l 2>/dev/null | grep -v "server.js" ; echo "@reboot cd $PROJECT_DIR && node backend-node/server.js >> backend.log 2>&1 &") | crontab - 2>/dev/null || true
+# Ensure process auto-restarts via crontab on reboot
+(crontab -l 2>/dev/null | grep -v "server.js" ; echo "@reboot cd $PROJECT_DIR && PORT=$APP_PORT $NODE_BIN backend-node/server.js >> backend.log 2>&1 &") | crontab - 2>/dev/null || true
 
 echo -e "\n${CYAN}================================================================================${NC}"
 echo -e "${GREEN}${BOLD}    🎉 DEPLOYMENT SUCCESSFUL ON RKENTERPRISESS.NET!                            ${NC}"
